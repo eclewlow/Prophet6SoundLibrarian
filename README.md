@@ -34,6 +34,14 @@ Upon connecting the Prophet 6, the connection status in the TRANSFER area should
 
 Also, the buttons in the TRANSFER area will change from disabled to enabled.
 
+### Best Workflow
+
+1. Open Prophet6SoundLibrarian
+2. Click Receive All (this will read all user banks from Prophet 6)
+3. Choose File->Save Library... (this will create a backup of the Prophet 6 user banks)
+4. It is now safe to freely edit without worrying about your most recent Prophet 6 user banks, as you can easily load them from the `.p6lib` backup you just created and click Send All to restore the Prophet 6 user banks.
+5. Happy editing!
+
 ### Transferring Patches between the Prophet 6 and Prophet6SoundLibrarian
 
 Click the "Receive All" button to read all 500 user bank patches from the Prophet 6.  This will overwrite the current library being displayed in the PATCH LIST area.
