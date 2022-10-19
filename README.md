@@ -5,7 +5,7 @@ Prophet 6 Sound Librarian for organizing patches on the Sequential Circuits Prop
 
 ## Installation
 
-### Standalone Prophet 6 Sound Librarian
+### Standalone Prophet 6 Sound Librarian download
 
 You can download the standalone jar
 from the
@@ -20,11 +20,8 @@ On opening the Prophet6SoundLibrarian JAR file, the main window should appear as
 
 <img width="720" alt="Screen Shot 2022-10-19 at 2 42 14 AM" src="https://user-images.githubusercontent.com/32854625/196656599-d5dc152b-a263-4934-a2b5-3d4c8b69deb9.png">
 
-There are 3 main areas of the Prophet6SoundLibrarian:
-
-1. The TRANSFER area
-2. The PATCH LIST
-3. The PATCH NAME EDITOR
+The Prophet6SoundLibrarian allows for transferring user bank/programs to and from the Prophet 6 synthesizer.
+It also allows for reordering single patches or group-selected patches, renaming patches, saving an entire 500-patch library (`*.p6lib` file), saving single or multiple-selected programs (`*.p6program` file), and loading both `p6lib` and `p6program` files.
 
 ### Connecting the Sequential Circuits Prophet 6
 
