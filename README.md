@@ -3,7 +3,7 @@ Prophet 6 Sound Librarian for organizing patches on the Sequential Circuits Prop
 
 [![License](https://img.shields.io/badge/License-Eclipse%20Public%20License%202.0-blue.svg)](#license)
 
-Prophet6SoundLibrarian would not be possible without the Mac Java MIDI SysEx implementation that Derek Cook has so arduously developed.  The library can be found here https://github.com/DerekCook/CoreMidi4J.  CoreMidi4J is provided under the Eclipse Public License 1.0.
+Prophet6SoundLibrarian would not be possible without the Mac Java MIDI SysEx implementation that Derek Cook has so arduously developed.  The library can be found here https://github.com/DerekCook/CoreMidi4J.  CoreMidi4J is provided similarly under the Eclipse Public License 1.0.
 
 ## Installation
 
