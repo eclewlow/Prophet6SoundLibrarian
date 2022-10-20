@@ -138,18 +138,19 @@ public class Prophet6SoundLibrarian extends JPanel {
 
 						FileInputStream fis = new FileInputStream(file);
 
-						byte[] allBytes = fis.readAllBytes();
+						byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH*PROPHET_6_USER_BANK_COUNT];
+						fis.read(buf, 0, buf.length);
 
 						fis.close();
 
-						Prophet6SoundLibrarianFileValidator.validateP6Library(allBytes);
+						Prophet6SoundLibrarianFileValidator.validateP6Library(buf);
 
 						List<Prophet6SysexPatch> newList = new ArrayList<>();
 
 						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
 
 						for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-							byte[] patchBytes = Arrays.copyOfRange(allBytes, i * PROPHET_6_SYSEX_LENGTH,
+							byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
 									(i + 1) * PROPHET_6_SYSEX_LENGTH);
 							Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
 
@@ -161,6 +162,7 @@ public class Prophet6SoundLibrarian extends JPanel {
 
 					} catch (Exception ex) {
 						ex.printStackTrace();
+						JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file", JOptionPane.ERROR_MESSAGE);
 					}
 				} else {
 					String absPath = fc.getCurrentDirectory().getAbsolutePath();
@@ -262,15 +264,11 @@ public class Prophet6SoundLibrarian extends JPanel {
 
 						FileInputStream fis = new FileInputStream(file);
 
-						int numPatches = (int) file.length() / Prophet6SoundLibrarian.PROPHET_6_SYSEX_LENGTH;
-
-						if (numPatches != 1) {
-							fis.close();
-							throw new Exception("Corrupted file data");
-						}
-
 						byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
 						fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
+
+						Prophet6SoundLibrarianFileValidator.validateP6Program(buf);
+
 
 						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
 						List<Prophet6SysexPatch> l = model.getPatches();
@@ -288,6 +286,7 @@ public class Prophet6SoundLibrarian extends JPanel {
 
 					} catch (Exception ex) {
 						ex.printStackTrace();
+						JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file", JOptionPane.ERROR_MESSAGE);
 					}
 				} else {
 					String absPath = fc.getCurrentDirectory().getAbsolutePath();
