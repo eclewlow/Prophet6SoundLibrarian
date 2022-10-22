@@ -28,34 +28,1551 @@ import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.awt.event.FocusEvent.Cause;
 
-public class Prophet6SoundLibrarian extends JPanel {
+public class Prophet6SoundLibrarian {
 
-	private static final long serialVersionUID = 1L;
-	JButton openButton;
-	JButton printButton;
-	JFrame frame;
+	public Prophet6SoundLibrarianMainFrame mainFrame;
+	public Prophet6SoundLibrarianMergeFrame mergeFrame;
 
-	JMenuItem menuItemNewLibrary;
-	JMenuItem menuItemLoadLibrary;
-	JMenuItem menuItemSaveLibrary;
-	JMenuItem menuItemLoadProgram;
-	JMenuItem menuItemSaveProgram;
+	public class Prophet6SoundLibrarianMainFrame extends JFrame {
+		private static final long serialVersionUID = 1L;
+		JButton openButton;
+		JButton printButton;
+		JFrame frame;
+		NameField nameField;
+		JLabel connectionStatusLabel;
+		JLabel deviceLabel;
 
-	NameField nameField;
-	JLabel connectionStatusLabel;
-	JLabel deviceLabel;
+		JButton sendButton;
+		JButton receiveButton;
+		JButton sendAllButton;
+		JButton receiveAllButton;
 
-	JButton sendButton;
+		JProgressBar progressBar;
+		DragDropList ddl;
+		NameFieldFocusListener nffl = new NameFieldFocusListener();
 
-	JButton receiveButton;
+		public Prophet6SoundLibrarianMainFrame(String arg0) {
+			super(arg0);
+		}
 
-	JButton sendAllButton;
+		class MyListDropHandler extends TransferHandler {
+			private static final long serialVersionUID = 1L;
+			DragDropList list;
 
-	JButton receiveAllButton;
+			public MyListDropHandler(DragDropList list) {
+				this.list = list;
+			}
 
-	JProgressBar progressBar;
+			protected Transferable createTransferable(JComponent c) {
+				StringSelection transferable = new StringSelection(Integer.toString(list.getSelectedRow()));
 
-	private DragDropList ddl;
+				return transferable;
+			}
+
+			public int getSourceActions(JComponent c) {
+				return COPY_OR_MOVE;
+			}
+
+			public boolean canImport(TransferHandler.TransferSupport support) {
+				if (!support.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+					return false;
+				}
+				JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
+
+				if (dl.getRow() == -1) {
+					return false;
+				} else {
+					return true;
+				}
+			}
+
+			public boolean importData(TransferHandler.TransferSupport support) {
+				if (!canImport(support)) {
+					return false;
+				}
+
+				try {
+					JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
+					int dropTargetIndex = dl.getRow();
+
+					DragDropList dpl = (DragDropList) support.getComponent();
+					Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) dpl.getModel();
+
+					int[] selectedRows = dpl.getSelectedRows();
+
+					List<Prophet6SysexPatch> patches = dlm.getPatches();
+
+					List<Prophet6SysexPatch> selectedObjects = new ArrayList<Prophet6SysexPatch>();
+					List<Prophet6SysexPatch> selectedObjectClones = new ArrayList<Prophet6SysexPatch>();
+
+					for (int i = 0; i < selectedRows.length; i++) {
+						Prophet6SysexPatch patch = patches.get(selectedRows[i]);
+						selectedObjects.add(patch);
+						selectedObjectClones.add((Prophet6SysexPatch) patch.clone());
+					}
+					patches.addAll(dropTargetIndex, selectedObjectClones);
+					patches.removeAll(selectedObjects);
+
+					dlm.fireTableDataChanged();
+
+					int cloneIndex = patches.indexOf(selectedObjectClones.get(0));
+					ddl.addRowSelectionInterval(cloneIndex, cloneIndex + selectedObjectClones.size() - 1);
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				return true;
+			}
+		}
+
+		public class DragDropList extends JTable implements ClipboardOwner {
+			private static final long serialVersionUID = 1L;
+			Prophet6SysexTableItemModel model;
+
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+				Component returnComp = super.prepareRenderer(renderer, row, column);
+				Color alternateColor = new Color(252, 242, 206);
+				Color whiteColor = Color.WHITE;
+				if (!returnComp.getBackground().equals(getSelectionBackground())) {
+					Color bg = (row % 2 == 0 ? alternateColor : whiteColor);
+					returnComp.setBackground(bg);
+					bg = null;
+				}
+
+				return returnComp;
+			};
+
+			public DragDropList() {
+				super(new Prophet6SysexTableItemModel());
+				model = (Prophet6SysexTableItemModel) getModel();
+
+				setDropMode(DropMode.INSERT_ROWS);
+				setFillsViewportHeight(true);
+				getTableHeader().setReorderingAllowed(false);
+
+				setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+				UIManager.put("Table.dropLineColor", Color.cyan);
+				UIManager.put("Table.dropLineShortColor", Color.cyan);
+
+				setDragEnabled(true);
+				setTransferHandler(new MyListDropHandler(this));
+
+				getColumnModel().getColumn(0).setPreferredWidth(60);
+				getColumnModel().getColumn(0).setMinWidth(60);
+				getColumnModel().getColumn(1).setPreferredWidth(600);
+
+				getInputMap().put(KeyStroke.getKeyStroke("shift TAB"), "table-shift-tab");
+				getActionMap().put("table-shift-tab", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+						manager.focusPreviousComponent();
+					}
+				});
+				getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "table-tab");
+				getActionMap().put("table-tab", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+						manager.focusNextComponent();
+					}
+				});
+
+				getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+					@Override
+					public void valueChanged(ListSelectionEvent e) {
+
+						Prophet6SoundLibrarianMenuBar menuBar = (Prophet6SoundLibrarianMenuBar) getJMenuBar();
+
+						if (!e.getValueIsAdjusting()) {
+							int[] selectedRows = getSelectedRows();
+							if (selectedRows.length > 1) {
+								Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
+								nameField.setCurrentIndex(selectedRows[0]);
+								nameField.setText(patch.getPatchName().replaceAll("\\s+$", ""));
+								nameField.setEnabled(true);
+								menuBar.menuItemLoadProgram.setEnabled(false);
+								menuBar.menuItemSaveProgram.setEnabled(true);
+							} else if (selectedRows.length == 1) {
+								Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
+								nameField.setCurrentIndex(selectedRows[0]);
+								nameField.setText(patch.getPatchName().replaceAll("\\s+$", ""));
+								nameField.setEnabled(true);
+								menuBar.menuItemLoadProgram.setEnabled(true);
+								menuBar.menuItemSaveProgram.setEnabled(true);
+							} else if (selectedRows.length == 0) {
+								nameField.setCurrentIndex(-1);
+								nameField.setText("");
+								nameField.setEnabled(false);
+								menuBar.menuItemLoadProgram.setEnabled(false);
+								menuBar.menuItemSaveProgram.setEnabled(false);
+							}
+						}
+					}
+				});
+				getInputMap().put(KeyStroke.getKeyStroke("meta C"), "copy");
+				getActionMap().put("copy", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+
+						Clipboard c = Toolkit.getDefaultToolkit().getSystemClipboard();
+
+						Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
+						List<Prophet6SysexPatch> patches = dlm.getPatches();
+						int selectedRow = getSelectedRow();
+
+						Prophet6SysexPatchSelection selection = new Prophet6SysexPatchSelection(
+								patches.get(selectedRow));
+						c.setContents(selection, DragDropList.this);
+					}
+				});
+				getInputMap().put(KeyStroke.getKeyStroke("meta V"), "paste");
+				getActionMap().put("paste", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+
+						Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+						Transferable content = clipboard.getContents(DragDropList.this);
+
+						boolean hasTransferable = (content != null)
+								&& content.isDataFlavorSupported(Prophet6SysexPatchSelection.dmselFlavor);
+						if (hasTransferable) {
+							try {
+								Prophet6SysexPatch result = (Prophet6SysexPatch) content
+										.getTransferData(Prophet6SysexPatchSelection.dmselFlavor);
+
+								Prophet6SysexPatch clone = (Prophet6SysexPatch) result.clone();
+								Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
+								List<Prophet6SysexPatch> patches = dlm.getPatches();
+								int selectedRow = getSelectedRow();
+								patches.set(selectedRow, clone);
+								dlm.fireTableDataChanged();
+								ddl.addRowSelectionInterval(selectedRow, selectedRow);
+
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							}
+						}
+					}
+				});
+			}
+
+			@Override
+			public void lostOwnership(Clipboard clipboard, Transferable contents) {
+				System.out.println("DragDropList Clipboard: Lost ownership");
+			}
+
+		}
+
+		public class NameField extends JTextField {
+			private static final long serialVersionUID = 1L;
+			public int currentIndex = -1;
+
+			public void setCurrentIndex(int index) {
+				this.currentIndex = index;
+			}
+
+			public int getCurrentIndex() {
+				return this.currentIndex;
+			}
+		}
+
+		public class NameFieldFocusListener implements FocusListener {
+
+			public int lastCaretPosition = -1;
+
+			@Override
+			public void focusGained(FocusEvent e) {
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+				if (e.getCause() == Cause.TRAVERSAL_FORWARD || e.getCause() == Cause.TRAVERSAL_BACKWARD) {
+					if (nameField.getCurrentIndex() != -1) {
+						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+						List<Prophet6SysexPatch> l = model.getPatches();
+						int[] selectedRows = ddl.getSelectedRows();
+
+						l.get(nameField.getCurrentIndex()).setPatchName(nameField.getText());
+						model.fireTableDataChanged();
+
+						for (int i = 0; i < selectedRows.length; i++) {
+							ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+						}
+
+					}
+				} else if (e.getCause() == Cause.UNKNOWN) {
+
+					if (nameField.getCurrentIndex() != -1) {
+						int currentIndex = nameField.getCurrentIndex();
+
+						int[] selectedRows = ddl.getSelectedRows();
+
+						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+						List<Prophet6SysexPatch> l = model.getPatches();
+
+						l.get(currentIndex).setPatchName(nameField.getText());
+						model.fireTableDataChanged();
+
+						for (int i = 0; i < selectedRows.length; i++) {
+							ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+						}
+					}
+				}
+			}
+
+			public void setLastCaretPosition(int pos) {
+				this.lastCaretPosition = pos;
+			}
+
+			public int getLastCaretPosition() {
+				return this.lastCaretPosition;
+			}
+
+		}
+
+		private JPanel createEditor() {
+			JPanel panel = new JPanel(new BorderLayout());
+
+			nameField = new NameField();
+			AbstractDocument ad = (AbstractDocument) nameField.getDocument();
+
+			nameField.addFocusListener(nffl);
+			nameField.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
+					int selectedRow = ddl.getSelectedRow();
+					int[] selectedRows = ddl.getSelectedRows();
+					l.get(selectedRow).setPatchName(((JTextField) e.getSource()).getText());
+					model.fireTableDataChanged();
+
+					for (int i = 0; i < selectedRows.length; i++) {
+						ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+					}
+				}
+			});
+			ad.setDocumentFilter(new DocumentFilter() {
+				@Override
+				public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+						throws BadLocationException {
+
+					if (fb.getDocument().getLength() + string.length() > SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH) {
+						return;
+					}
+					super.insertString(fb, offset, string, attr);
+				}
+
+				@Override
+				public void replace(DocumentFilter.FilterBypass fb, int offset, int length, String text,
+						AttributeSet attrs) throws BadLocationException {
+					int documentLength = fb.getDocument().getLength();
+					if (documentLength - length + text.length() <= SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH)
+						super.replace(fb, offset, length, text, attrs);
+				}
+			});
+			nameField.setFont(new Font("Verdana", Font.PLAIN, 11));
+			panel.add(nameField, BorderLayout.CENTER);
+			TitledBorder tb = BorderFactory.createTitledBorder("Patch Name");
+			tb.setTitleFont(new Font("Verdana", Font.PLAIN, 11));
+			panel.setBorder(tb);
+			return panel;
+
+		}
+
+		public JPanel createProgressArea() {
+
+			JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+
+			progressBar = new JProgressBar(0, PROPHET_6_USER_BANK_COUNT);
+			progressBar.setValue(0);
+			progressBar.setStringPainted(true);
+			progressBar.setVisible(true);
+			progressBar.setString("");
+			progressBar.setEnabled(false);
+			progressBar.setPreferredSize(new Dimension(300, 29));
+
+			panel.add(progressBar);
+
+			return panel;
+		}
+
+		public JScrollPane createDragDropList() {
+			this.ddl = new DragDropList();
+			return new JScrollPane(this.ddl);
+		}
+
+		public void setConnection(String connectionStatus, String device) {
+			if (connectionStatus.equals("DISCONNECTED") || device.equals("No Device")) {
+				connectionStatusLabel.setText("DISCONNECTED");
+				connectionStatusLabel.setForeground(Color.WHITE);
+				connectionStatusLabel.setBackground(Color.BLACK);
+
+				deviceLabel.setText("No Device");
+				setTransferAreaEnabled(false);
+			} else {
+				connectionStatusLabel.setText(connectionStatus);
+				connectionStatusLabel.setForeground(Color.BLACK);
+				connectionStatusLabel.setBackground(Color.WHITE);
+
+				deviceLabel.setText(device);
+				setTransferAreaEnabled(true);
+			}
+		}
+
+		public void setTransferAreaEnabled(boolean enabled) {
+			sendButton.setEnabled(enabled);
+			receiveButton.setEnabled(enabled);
+			sendAllButton.setEnabled(enabled);
+			receiveAllButton.setEnabled(enabled);
+		}
+
+		public void progressStart(int max) {
+			setTransferAreaEnabled(false);
+			progressBar.setValue(0);
+			progressBar.setMaximum(max);
+			progressBar.setVisible(true);
+			progressBar.setString("Loading...");
+			progressBar.setEnabled(true);
+			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+
+		}
+
+		public void progressFinish() {
+			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+			progressBar.setValue(PROPHET_6_USER_BANK_COUNT);
+			progressBar.setString("Done!");
+
+			new java.util.Timer().schedule(new java.util.TimerTask() {
+				@Override
+				public void run() {
+					progressBar.setEnabled(false);
+					progressBar.setString("");
+					setTransferAreaEnabled(true);
+				}
+			}, 2000);
+		}
+
+		public JPanel createTransferArea() {
+
+			JPanel panel = new JPanel(new GridBagLayout());
+			panel.setBorder(new EmptyBorder(5, 0, 0, 0));
+			GridBagConstraints c = new GridBagConstraints();
+
+			JPanel sequentialPanel = new JPanel();
+			ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+			JLabel sequentialLabel = new JLabel(sequentialIcon);
+			sequentialPanel.add(sequentialLabel);
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.gridheight = 3;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+
+			panel.add(sequentialPanel, c);
+
+			final int CONNECTION_PREFERRED_WIDTH = 105;
+			final int CONNECTION_PREFERRED_HEIGHT = 17;
+
+			connectionStatusLabel = new JLabel("DISCONNECTED");
+
+			Border blackline = BorderFactory.createLineBorder(Color.black);
+			Border margin = new EmptyBorder(0, 6, 0, 6);
+			connectionStatusLabel.setBorder(new CompoundBorder(blackline, margin));
+			connectionStatusLabel
+					.setPreferredSize(new Dimension(CONNECTION_PREFERRED_WIDTH, CONNECTION_PREFERRED_HEIGHT));
+
+			connectionStatusLabel.setFont(new Font("Verdana", Font.PLAIN, 11));
+			connectionStatusLabel.setVerticalAlignment(SwingConstants.BOTTOM);
+			connectionStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+			connectionStatusLabel.setOpaque(true);
+			connectionStatusLabel.setForeground(Color.WHITE);
+			connectionStatusLabel.setBackground(Color.BLACK);
+
+			deviceLabel = new JLabel("No Device");
+			deviceLabel.setFont(new Font("Verdana", Font.PLAIN, 11));
+			deviceLabel.setHorizontalAlignment(JLabel.CENTER);
+
+			deviceLabel.setPreferredSize(new Dimension(CONNECTION_PREFERRED_WIDTH, CONNECTION_PREFERRED_HEIGHT));
+
+			Prophet6Sysex.getInstance().addObserver(new Observer() {
+
+				@Override
+				public void update(String status, String target) {
+
+					if (status.equals("DISCONNECTED") || status.equals("CONNECTED"))
+						setConnection(status, target);
+				}
+			});
+
+			c.gridx = 1;
+			c.gridy = 1;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			panel.add(connectionStatusLabel, c);
+
+			c.gridx = 1;
+			c.gridy = 2;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			panel.add(deviceLabel, c);
+
+			final int BUTTON_PREFERRED_WIDTH = 99;
+			final int BUTTON_PREFERRED_HEIGHT = 29;
+
+			sendButton = new JButton("SEND");
+			sendButton.setFont(new Font("Verdana", Font.PLAIN, 11));
+			sendButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
+
+			sendButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
+					int[] selectedRows = ddl.getSelectedRows();
+
+					Runnable runner = new Runnable() {
+						public void run() {
+
+							try {
+								if (selectedRows.length == 0)
+									throw new Exception("No rows selected");
+
+								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+
+								progressStart(selectedRows.length);
+
+								for (int i = 0; i < selectedRows.length; i++) {
+
+									progressBar.setValue(i + 1);
+									progressBar.setString("Sending..." + (i + 1) + " / " + selectedRows.length);
+
+									p6sysex.send(l.get(selectedRows[i]).bytes.clone());
+									Thread.sleep(SYSEX_SEND_DELAY_TIME);
+								}
+
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							} finally {
+								ddl.clearSelection();
+
+								for (int i = 0; i < selectedRows.length; i++)
+									ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+
+								progressFinish();
+							}
+						}
+					};
+					Thread t = new Thread(runner, "Code Executer");
+					t.start();
+
+				}
+			});
+
+			receiveButton = new JButton("RECEIVE");
+			receiveButton.setFont(new Font("Verdana", Font.PLAIN, 11));
+			receiveButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
+
+			receiveButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
+					int[] selectedRows = ddl.getSelectedRows();
+					try {
+						if (selectedRows.length == 0)
+							throw new Exception("No rows selected");
+
+						Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+
+						progressStart(selectedRows.length);
+
+						synchronized (p6sysex) {
+
+							for (int i = 0; i < selectedRows.length; i++) {
+								int bankNo = l.get(selectedRows[i]).getPatchBank();
+								int progNo = l.get(selectedRows[i]).getPatchProg();
+
+								p6sysex.dumpRequest(bankNo, progNo);
+
+								progressBar.setValue(i + 1);
+								progressBar.setString("Receiving..." + (i + 1) + " / " + selectedRows.length);
+								p6sysex.wait();
+
+								Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
+
+								l.set(selectedRows[i], patch);
+							}
+
+							model.fireTableDataChanged();
+
+						}
+
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					} finally {
+						ddl.clearSelection();
+
+						for (int i = 0; i < selectedRows.length; i++)
+							ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+						progressFinish();
+					}
+				}
+			});
+
+			c.gridx = 2;
+			c.gridy = 1;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.EAST;
+			c.insets = new Insets(0, 5, 0, 5);
+			panel.add(sendButton, c);
+
+			c.gridx = 2;
+			c.gridy = 2;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.insets = new Insets(0, 5, 0, 5);
+			panel.add(receiveButton, c);
+
+			sendAllButton = new JButton("SEND ALL");
+			sendAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
+			sendAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
+
+			sendAllButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
+
+					Runnable runner = new Runnable() {
+						public void run() {
+							try {
+								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+
+								progressStart(PROPHET_6_USER_BANK_COUNT);
+
+								for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+
+									progressBar.setString("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
+									progressBar.setValue(i + 1);
+
+									p6sysex.send(l.get(i).bytes.clone());
+
+									Thread.sleep(SYSEX_SEND_DELAY_TIME);
+								}
+
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							} finally {
+								progressFinish();
+							}
+						}
+					};
+					Thread t = new Thread(runner, "Code Executer");
+					t.start();
+
+				}
+			});
+
+			receiveAllButton = new JButton("RECEIVE ALL");
+			receiveAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
+			receiveAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
+
+			receiveAllButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					Runnable runner = new Runnable() {
+						public void run() {
+
+							try {
+								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+
+								synchronized (p6sysex) {
+									List<Prophet6SysexPatch> newList = new ArrayList<>();
+
+									progressStart(PROPHET_6_USER_BANK_COUNT);
+
+									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+										int bankNo = i / 100;
+										int progNo = i % 100;
+										p6sysex.dumpRequest(bankNo, progNo);
+
+										progressBar.setValue(i + 1);
+										progressBar.setString(
+												"Receiving..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
+										p6sysex.wait();
+
+										Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
+
+										newList.add(patch);
+									}
+									model.setPatches(newList);
+									model.fireTableDataChanged();
+									ddl.addRowSelectionInterval(0, 0);
+
+								}
+
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							} finally {
+								progressFinish();
+							}
+						}
+					};
+					Thread t = new Thread(runner, "Code Executer");
+					t.start();
+
+				}
+			});
+
+			c.gridx = 3;
+			c.gridy = 1;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.insets = new Insets(0, 5, 0, 5);
+			panel.add(sendAllButton, c);
+
+			c.gridx = 3;
+			c.gridy = 2;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.insets = new Insets(0, 5, 0, 5);
+			panel.add(receiveAllButton, c);
+
+			setTransferAreaEnabled(false);
+
+			JLabel programsLabel = new JLabel("PROGRAMS");
+			programsLabel.setFont(new Font("Verdana", Font.PLAIN, 10));
+			programsLabel.setVerticalAlignment(SwingConstants.TOP);
+			programsLabel.setHorizontalAlignment(SwingConstants.CENTER);
+			programsLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.gray));
+
+			c.gridx = 2;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 2;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.insets = new Insets(0, 5, 0, 5);
+			panel.add(programsLabel, c);
+
+			return panel;
+		}
+
+	}
+
+	public class Prophet6SoundLibrarianMergeFrame extends JFrame {
+		private static final long serialVersionUID = 1L;
+
+		public MergeTable mergeIntoTable;
+		public MergeTable mergeFromTable;
+
+		public Prophet6SoundLibrarianMergeFrame(String arg0) {
+			super(arg0);
+
+			JPanel mergePanel = new JPanel();
+			mergePanel.setOpaque(true);
+			mergePanel.setLayout(new GridBagLayout());
+
+			this.mergeFromTable = new MergeTable(MergeTable.MERGE_TABLE_MODE_SOURCE);
+			this.mergeIntoTable = new MergeTable(MergeTable.MERGE_TABLE_MODE_DESTINATION);
+
+			GridBagConstraints c = new GridBagConstraints();
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			mergePanel.add(new JScrollPane(mergeFromTable), c);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 1;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			mergePanel.add(new JScrollPane(mergeIntoTable), c);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 1;
+			c.gridheight = 1;
+			c.gridwidth = 2;
+			c.anchor = GridBagConstraints.BASELINE;
+			JButton mergeButton = new JButton("Merge");
+			mergeButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					MergeTable table = (MergeTable) mergeIntoTable;
+					
+					Prophet6SysexTableItemModel model;
+					
+					model = (Prophet6SysexTableItemModel) table.getModel();
+
+					List<Prophet6SysexPatch> mergeSource = model.getPatches();
+
+					model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+
+					List<Prophet6SysexPatch> mergeSourceClone = new ArrayList<Prophet6SysexPatch>();
+
+					try {
+						for (Prophet6SysexPatch p : mergeSource) {
+							mergeSourceClone.add((Prophet6SysexPatch) p.clone());
+						}
+						model.setPatches(mergeSourceClone);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+
+					close();
+				}
+			});
+			mergePanel.add(mergeButton, c);
+
+			setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+			setContentPane(mergePanel);
+
+			Prophet6SoundLibrarianDummyMenuBar menuBar = new Prophet6SoundLibrarianDummyMenuBar();
+			setJMenuBar(menuBar);
+
+			addWindowListener(new WindowAdapter() {
+				@Override
+				public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+					close();
+				}
+			});
+			pack();
+		}
+
+		public void open() {
+			setVisible(true);
+
+			MergeTable table = (MergeTable) mergeIntoTable;
+			Prophet6SysexTableItemModel model;
+			model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+
+			List<Prophet6SysexPatch> mergeSource = model.getPatches();
+
+			model = (Prophet6SysexTableItemModel) table.getModel();
+
+			List<Prophet6SysexPatch> mergeSourceClone = new ArrayList<Prophet6SysexPatch>();
+
+			try {
+				for (Prophet6SysexPatch p : mergeSource) {
+					mergeSourceClone.add((Prophet6SysexPatch) p.clone());
+				}
+				model.setPatches(mergeSourceClone);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			mainFrame.setEnabled(false);
+		}
+
+		public void close() {
+			setVisible(false);
+			mainFrame.setEnabled(true);
+		}
+
+		class MergeTransferHandler extends TransferHandler {
+			private static final long serialVersionUID = 1L;
+			MergeTable table;
+
+			public MergeTransferHandler(MergeTable table) {
+				this.table = table;
+			}
+
+			protected Transferable createTransferable(JComponent c) {
+
+				Transferable transferable;
+
+				if (table.mode == MergeTable.MERGE_TABLE_MODE_DESTINATION) {
+					transferable = new Prophet6SysexDummySelection(null);
+				} else {
+
+					int[] selectedRows = table.getSelectedRows();
+
+					Prophet6SysexTableItemModel dlm = table.model;
+					List<Prophet6SysexPatch> patches = dlm.getPatches();
+
+					List<Prophet6SysexPatch> selectedObjectClones = new ArrayList<Prophet6SysexPatch>();
+
+					for (int i = 0; i < selectedRows.length; i++) {
+						Prophet6SysexPatch patch = patches.get(selectedRows[i]);
+
+						try {
+							selectedObjectClones.add((Prophet6SysexPatch) patch.clone());
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+
+					transferable = new Prophet6SysexPatchMultiSelection(selectedObjectClones);
+				}
+				return transferable;
+			}
+
+			public int getSourceActions(JComponent c) {
+				return COPY_OR_MOVE;
+			}
+
+			public boolean canImport(TransferHandler.TransferSupport support) {
+
+				if (!support.isDataFlavorSupported(Prophet6SysexPatchMultiSelection.multiPatchFlavor)) {
+					return false;
+				}
+
+				if (table.mode == MergeTable.MERGE_TABLE_MODE_SOURCE)
+					return false;
+
+				JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
+
+				if (dl.getRow() == -1) {
+					return false;
+				} else {
+					return true;
+				}
+			}
+
+			public boolean canImport(JComponent comp, Transferable t) {
+				if (!t.isDataFlavorSupported(Prophet6SysexPatchMultiSelection.multiPatchFlavor)) {
+					return false;
+				}
+
+				if (table.mode == MergeTable.MERGE_TABLE_MODE_SOURCE)
+					return false;
+
+				return true;
+			}
+
+			@SuppressWarnings("unchecked")
+			public boolean importData(TransferHandler.TransferSupport support) {
+				if (!canImport(support)) {
+					return false;
+				}
+
+				Prophet6SoundLibrarianMergeDragStateManager.getInstance().setDragging(false);
+
+				try {
+					List<Prophet6SysexPatch> patches = (List<Prophet6SysexPatch>) support.getTransferable()
+							.getTransferData(Prophet6SysexPatchMultiSelection.multiPatchFlavor);
+
+					JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
+					int dropTargetIndex = dl.getRow();
+
+					MergeTable table = (MergeTable) support.getComponent();
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) table.getModel();
+
+					List<Prophet6SysexPatch> mergeDestination = model.getPatches();
+
+					int i = dropTargetIndex;
+					for (Prophet6SysexPatch p : patches) {
+						if (i >= mergeDestination.size() || i < 0)
+							break;
+						mergeDestination.set(i++, (Prophet6SysexPatch) p.clone());
+					}
+
+					model.fireTableDataChanged();
+
+					table.addRowSelectionInterval(dropTargetIndex,
+							Math.min(dropTargetIndex + patches.size() - 1, mergeDestination.size() - 1));
+					table.repaint();
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				return true;
+			}
+		}
+
+		public class MergeTable extends JTable {
+			private static final long serialVersionUID = 1L;
+			Prophet6SysexTableItemModel model;
+			public static final int MERGE_TABLE_MODE_SOURCE = 0;
+			public static final int MERGE_TABLE_MODE_DESTINATION = 1;
+			public int mode;
+
+			public String toString() {
+				if (this.mode == MERGE_TABLE_MODE_SOURCE)
+					return "MERGE_TABLE_MODE_SOURCE";
+				if (this.mode == MERGE_TABLE_MODE_DESTINATION)
+					return "MERGE_TABLE_MODE_DESTINATION";
+				return super.toString();
+			}
+
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+				Component returnComp = super.prepareRenderer(renderer, row, column);
+				Color alternateColor = new Color(252, 242, 206);
+				Color whiteColor = Color.WHITE;
+				if (!returnComp.getBackground().equals(getSelectionBackground())) {
+					Color bg = (row % 2 == 0 ? alternateColor : whiteColor);
+					returnComp.setBackground(bg);
+					bg = null;
+				}
+
+				if (Prophet6SoundLibrarianMergeDragStateManager.getInstance().isDragging()) {
+					if (mode == MERGE_TABLE_MODE_DESTINATION) {
+						int selectedRow = getSelectedRow();
+
+						Color bg = (row % 2 == 0 ? new Color(0xB4C5E5) : new Color(0xC3D3F6));
+
+						if (row >= selectedRow && row < selectedRow + mergeFromTable.getSelectedRowCount()) {
+							returnComp.setBackground(bg);
+
+						}
+					}
+				}
+
+				return returnComp;
+			};
+
+			public MergeTable(int mode) {
+				super(new Prophet6SysexTableItemModel());
+				model = (Prophet6SysexTableItemModel) getModel();
+
+				this.mode = mode;
+
+				setDropMode(DropMode.USE_SELECTION);
+
+				setFillsViewportHeight(true);
+				getTableHeader().setReorderingAllowed(false);
+
+				setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+				UIManager.put("Table.dropLineColor", Color.cyan);
+				UIManager.put("Table.dropLineShortColor", Color.cyan);
+
+				setDragEnabled(true);
+				setTransferHandler(new MergeTransferHandler(this));
+
+				addMouseMotionListener(new MouseMotionAdapter() {
+
+					@Override
+					public void mouseMoved(MouseEvent e) {
+						Prophet6SoundLibrarianMergeDragStateManager.getInstance().setDragging(false);
+					}
+
+					@Override
+					public void mouseDragged(MouseEvent e) {
+						if (mode == MergeTable.MERGE_TABLE_MODE_SOURCE)
+							Prophet6SoundLibrarianMergeDragStateManager.getInstance().setDragging(true);
+					}
+				});
+
+
+				getColumnModel().getColumn(0).setPreferredWidth(60);
+				getColumnModel().getColumn(0).setMinWidth(60);
+				getColumnModel().getColumn(1).setPreferredWidth(600);
+
+				getInputMap().put(KeyStroke.getKeyStroke("shift TAB"), "table-shift-tab");
+				getActionMap().put("table-shift-tab", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+						manager.focusPreviousComponent();
+					}
+				});
+
+				getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "table-tab");
+				getActionMap().put("table-tab", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+						manager.focusNextComponent();
+					}
+				});
+
+				getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+					@Override
+					public void valueChanged(ListSelectionEvent e) {
+						repaint();
+					}
+				});
+			}
+		}
+	}
+
+	public class Prophet6SoundLibrarianMenuBar extends JMenuBar {
+		private static final long serialVersionUID = 1L;
+		JMenuItem menuItemNewLibrary;
+		JMenuItem menuItemLoadLibrary;
+		JMenuItem menuItemSaveLibrary;
+		JMenuItem menuItemMergeLibrary;
+		JMenuItem menuItemLoadProgram;
+		JMenuItem menuItemSaveProgram;
+
+		public Prophet6SoundLibrarianMenuBar() {
+			JMenu menu = new JMenu("File");
+
+			menuItemNewLibrary = new JMenuItem("New Library");
+			menuItemNewLibrary.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					List<Prophet6SysexPatch> newList = new ArrayList<>();
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+
+					for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+						Prophet6SysexPatch patch = new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES);
+
+						newList.add(patch);
+					}
+					model.setPatches(newList);
+					model.fireTableDataChanged();
+					mainFrame.ddl.addRowSelectionInterval(0, 0);
+
+				}
+			});
+			menuItemNewLibrary.setAccelerator(KeyStroke.getKeyStroke("meta N"));
+
+			menu.add(menuItemNewLibrary);
+
+			menuItemLoadLibrary = new JMenuItem("Load Library...");
+			menuItemLoadLibrary.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					Preferences prefs = Preferences.userNodeForPackage(getClass());
+
+					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
+
+					final JFileChooser fc;
+
+					if (mostRecentDirectory == null)
+						fc = new JFileChooser();
+					else
+						fc = new JFileChooser(new File(mostRecentDirectory));
+
+					fc.addChoosableFileFilter(p6libraryFilter);
+					fc.setAcceptAllFileFilterUsed(false);
+					fc.setDialogTitle("Select File For Import");
+
+					int returnVal = fc.showOpenDialog(mainFrame);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+
+						try {
+
+							FileInputStream fis = new FileInputStream(file);
+
+							byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH * PROPHET_6_USER_BANK_COUNT];
+							fis.read(buf, 0, buf.length);
+
+							fis.close();
+
+							Prophet6SoundLibrarianFileValidator.validateP6Library(buf);
+
+							List<Prophet6SysexPatch> newList = new ArrayList<>();
+
+							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+
+							for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+								byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
+										(i + 1) * PROPHET_6_SYSEX_LENGTH);
+								Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
+
+								newList.add(patch);
+							}
+							model.setPatches(newList);
+							model.fireTableDataChanged();
+							mainFrame.ddl.addRowSelectionInterval(0, 0);
+
+						} catch (Exception ex) {
+							ex.printStackTrace();
+							JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file",
+									JOptionPane.ERROR_MESSAGE);
+						}
+					} else {
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+					}
+
+				}
+			});
+			menuItemLoadLibrary.setAccelerator(KeyStroke.getKeyStroke("meta O"));
+
+			menu.add(menuItemLoadLibrary);
+
+			menuItemSaveLibrary = new JMenuItem("Save Library...");
+			menuItemSaveLibrary.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Preferences prefs = Preferences.userNodeForPackage(getClass());
+
+					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
+
+					final JFileChooser fc;
+
+					if (mostRecentDirectory == null)
+						fc = new JFileChooser();
+					else
+						fc = new JFileChooser(new File(mostRecentDirectory));
+
+					fc.addChoosableFileFilter(p6libraryFilter);
+					fc.setAcceptAllFileFilterUsed(false);
+					fc.setDialogTitle("Choose a destination");
+
+					int returnVal = fc.showSaveDialog(mainFrame);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+
+						try {
+							if (!file.getAbsolutePath().endsWith(".p6lib")) {
+								file = new File(file + ".p6lib");
+							}
+							FileOutputStream fos = new FileOutputStream(file);
+							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+							List<Prophet6SysexPatch> l = model.getPatches();
+
+							for (Prophet6SysexPatch patch : l) {
+								fos.write(patch.bytes);
+							}
+							fos.close();
+
+						} catch (Exception ex) {
+							ex.printStackTrace();
+						}
+					} else {
+
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+					}
+
+				}
+			});
+			menuItemSaveLibrary.setAccelerator(KeyStroke.getKeyStroke("meta S"));
+			menu.add(menuItemSaveLibrary);
+
+			menuItemMergeLibrary = new JMenuItem("Merge Library...");
+			menuItemMergeLibrary.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					Preferences prefs = Preferences.userNodeForPackage(getClass());
+
+					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
+
+					final JFileChooser fc;
+
+					if (mostRecentDirectory == null)
+						fc = new JFileChooser();
+					else
+						fc = new JFileChooser(new File(mostRecentDirectory));
+
+					fc.addChoosableFileFilter(p6libraryFilter);
+					fc.setAcceptAllFileFilterUsed(false);
+					fc.setDialogTitle("Select File To Merge");
+
+					int returnVal = fc.showOpenDialog(mainFrame);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+
+						try {
+
+							FileInputStream fis = new FileInputStream(file);
+
+							byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH * PROPHET_6_USER_BANK_COUNT];
+							fis.read(buf, 0, buf.length);
+
+							fis.close();
+
+							Prophet6SoundLibrarianFileValidator.validateP6Library(buf);
+
+							List<Prophet6SysexPatch> newList = new ArrayList<>();
+
+							for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+								byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
+										(i + 1) * PROPHET_6_SYSEX_LENGTH);
+								Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
+
+								newList.add(patch);
+							}
+
+							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mergeFrame.mergeFromTable
+									.getModel();
+							model.setPatches(newList);
+
+							mergeFrame.open();
+
+						} catch (Exception ex) {
+							ex.printStackTrace();
+							JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file",
+									JOptionPane.ERROR_MESSAGE);
+						}
+					} else {
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+					}
+
+				}
+			});
+			menu.add(menuItemMergeLibrary);
+
+			menu.addSeparator();
+
+			menuItemLoadProgram = new JMenuItem("Load Program...");
+			menuItemLoadProgram.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Preferences prefs = Preferences.userNodeForPackage(getClass());
+
+					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
+
+					final JFileChooser fc;
+
+					if (mostRecentDirectory == null)
+						fc = new JFileChooser();
+					else
+						fc = new JFileChooser(new File(mostRecentDirectory));
+
+					fc.addChoosableFileFilter(p6programFilter);
+					fc.setAcceptAllFileFilterUsed(false);
+					fc.setDialogTitle("Select File(s) For Import");
+
+					int returnVal = fc.showOpenDialog(mainFrame);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+
+						try {
+
+							FileInputStream fis = new FileInputStream(file);
+
+							byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
+							fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
+
+							Prophet6SoundLibrarianFileValidator.validateP6Program(buf);
+
+							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+							List<Prophet6SysexPatch> l = model.getPatches();
+							int selectedRow = mainFrame.ddl.getSelectedRow();
+
+							Prophet6SysexPatch patch = new Prophet6SysexPatch(buf);
+
+							l.set(selectedRow, patch);
+
+							fis.close();
+
+							model.fireTableDataChanged();
+
+							mainFrame.ddl.addRowSelectionInterval(selectedRow, selectedRow);
+
+						} catch (Exception ex) {
+							ex.printStackTrace();
+							JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file",
+									JOptionPane.ERROR_MESSAGE);
+						}
+					} else {
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+					}
+
+				}
+			});
+			menuItemLoadProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt O"));
+
+			menu.add(menuItemLoadProgram);
+
+			menuItemSaveProgram = new JMenuItem("Save Program...");
+			menuItemSaveProgram.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Preferences prefs = Preferences.userNodeForPackage(getClass());
+
+					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
+
+					int selectedRow = mainFrame.ddl.getSelectedRow();
+					int[] selectedRows = mainFrame.ddl.getSelectedRows();
+
+					final JFileChooser fc;
+
+					if (mostRecentDirectory == null)
+						fc = new JFileChooser();
+					else
+						fc = new JFileChooser(new File(mostRecentDirectory));
+
+					fc.addChoosableFileFilter(p6programFilter);
+					fc.setAcceptAllFileFilterUsed(false);
+					fc.setDialogTitle("Choose a destination");
+
+					if (selectedRows.length > 1) {
+
+					} else {
+						fc.setSelectedFile(new File(l.get(selectedRow).toString() + ".p6program"));
+					}
+
+					int returnVal = fc.showSaveDialog(mainFrame);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+
+						try {
+							if (selectedRows.length > 1) {
+								if (file.exists() || file.mkdirs()) {
+									for (int i = 0; i < selectedRows.length; i++) {
+
+										File oneFile = new File(file, l.get(selectedRows[i]).toString() + ".p6program");
+										FileOutputStream fos = new FileOutputStream(oneFile);
+										fos.write(l.get(selectedRows[i]).bytes);
+										fos.close();
+									}
+								} else {
+									throw new Exception("Error creating directory");
+								}
+							} else {
+								if (!file.getAbsolutePath().endsWith(".p6program")) {
+									file = new File(file + ".p6program");
+								}
+
+								FileOutputStream fos = new FileOutputStream(file);
+								fos.write(l.get(selectedRow).bytes);
+								fos.close();
+							}
+
+							for (int i = 0; i < selectedRows.length; i++)
+								mainFrame.ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+
+						} catch (Exception ex) {
+							ex.printStackTrace();
+						}
+					} else {
+
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+					}
+
+				}
+			});
+			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
+			menu.add(menuItemSaveProgram);
+
+			menuItemLoadProgram.setEnabled(false);
+			menuItemSaveProgram.setEnabled(false);
+
+			add(menu);
+
+		}
+	}
+
+	public class Prophet6SoundLibrarianDummyMenuBar extends JMenuBar {
+		private static final long serialVersionUID = 1L;
+		JMenuItem menuItemNewLibrary;
+		JMenuItem menuItemLoadLibrary;
+		JMenuItem menuItemSaveLibrary;
+		JMenuItem menuItemMergeLibrary;
+		JMenuItem menuItemLoadProgram;
+		JMenuItem menuItemSaveProgram;
+
+		public Prophet6SoundLibrarianDummyMenuBar() {
+			JMenu menu = new JMenu("File");
+
+			menuItemNewLibrary = new JMenuItem("New Library");
+			menuItemNewLibrary.setEnabled(false);
+			menuItemNewLibrary.setAccelerator(KeyStroke.getKeyStroke("meta N"));
+
+			menu.add(menuItemNewLibrary);
+
+			menuItemLoadLibrary = new JMenuItem("Load Library...");
+			menuItemLoadLibrary.setEnabled(false);
+			menuItemLoadLibrary.setAccelerator(KeyStroke.getKeyStroke("meta O"));
+
+			menu.add(menuItemLoadLibrary);
+
+			menuItemSaveLibrary = new JMenuItem("Save Library...");
+			menuItemSaveLibrary.setEnabled(false);
+			menuItemSaveLibrary.setAccelerator(KeyStroke.getKeyStroke("meta S"));
+			menu.add(menuItemSaveLibrary);
+
+			menuItemMergeLibrary = new JMenuItem("Merge Library...");
+			menuItemMergeLibrary.setEnabled(false);
+			menu.add(menuItemMergeLibrary);
+
+			menu.addSeparator();
+
+			menuItemLoadProgram = new JMenuItem("Load Program...");
+			menuItemLoadProgram.setEnabled(false);
+			menuItemLoadProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt O"));
+
+			menu.add(menuItemLoadProgram);
+
+			menuItemSaveProgram = new JMenuItem("Save Program...");
+			menuItemSaveProgram.setEnabled(false);
+			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
+			menu.add(menuItemSaveProgram);
+
+			add(menu);
+		}
+	}
 
 	public static final byte[] SYSEX_MSG_DUMP_REQUEST = { (byte) 0xF0, 0x01, 0b00101101, 0b00000101, 0, 0,
 			(byte) 0b11110111 };
@@ -74,871 +1591,45 @@ public class Prophet6SoundLibrarian extends JPanel {
 	private static final int PROPHET_6_USER_BANK_COUNT = 500;
 	private static final int SYSEX_SEND_DELAY_TIME = 150;
 
-	FileNameExtensionFilter p6libraryFilter = new FileNameExtensionFilter("Prophet 6 Library Files (*.p6lib)", "p6lib");
-	FileNameExtensionFilter p6programFilter = new FileNameExtensionFilter("Prophet 6 Program Files (*.p6program)",
-			"p6program");
-
-	NameFieldFocusListener nffl = new NameFieldFocusListener();
-
-	public JMenuBar createMenuBar() {
-		JMenuBar menubar = new JMenuBar();
-		JMenu menu = new JMenu("File");
-
-		menuItemNewLibrary = new JMenuItem("New Library");
-		menuItemNewLibrary.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				List<Prophet6SysexPatch> newList = new ArrayList<>();
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-
-				for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-					Prophet6SysexPatch patch = new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES);
-
-					newList.add(patch);
-				}
-				model.setPatches(newList);
-				model.fireTableDataChanged();
-				ddl.addRowSelectionInterval(0, 0);
-
-			}
-		});
-		menuItemNewLibrary.setAccelerator(KeyStroke.getKeyStroke("meta N"));
-
-		menu.add(menuItemNewLibrary);
-
-		menuItemLoadLibrary = new JMenuItem("Load Library...");
-		menuItemLoadLibrary.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				Preferences prefs = Preferences.userNodeForPackage(getClass());
-
-				String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
-
-				final JFileChooser fc;
-
-				if (mostRecentDirectory == null)
-					fc = new JFileChooser();
-				else
-					fc = new JFileChooser(new File(mostRecentDirectory));
-
-				fc.addChoosableFileFilter(p6libraryFilter);
-				fc.setAcceptAllFileFilterUsed(false);
-
-				int returnVal = fc.showOpenDialog(Prophet6SoundLibrarian.this);
-
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					File file = fc.getSelectedFile();
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-
-					try {
-
-						FileInputStream fis = new FileInputStream(file);
-
-						byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH*PROPHET_6_USER_BANK_COUNT];
-						fis.read(buf, 0, buf.length);
-
-						fis.close();
-
-						Prophet6SoundLibrarianFileValidator.validateP6Library(buf);
-
-						List<Prophet6SysexPatch> newList = new ArrayList<>();
-
-						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-
-						for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-							byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
-									(i + 1) * PROPHET_6_SYSEX_LENGTH);
-							Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
-
-							newList.add(patch);
-						}
-						model.setPatches(newList);
-						model.fireTableDataChanged();
-						ddl.addRowSelectionInterval(0, 0);
-
-					} catch (Exception ex) {
-						ex.printStackTrace();
-						JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file", JOptionPane.ERROR_MESSAGE);
-					}
-				} else {
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-				}
-
-			}
-		});
-		menuItemLoadLibrary.setAccelerator(KeyStroke.getKeyStroke("meta O"));
-
-		menu.add(menuItemLoadLibrary);
-
-		menuItemSaveLibrary = new JMenuItem("Save Library...");
-		menuItemSaveLibrary.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Preferences prefs = Preferences.userNodeForPackage(getClass());
-
-				String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
-
-				final JFileChooser fc;
-
-				if (mostRecentDirectory == null)
-					fc = new JFileChooser();
-				else
-					fc = new JFileChooser(new File(mostRecentDirectory));
-
-				fc.addChoosableFileFilter(p6libraryFilter);
-				fc.setAcceptAllFileFilterUsed(false);
-
-				int returnVal = fc.showSaveDialog(Prophet6SoundLibrarian.this);
-
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					File file = fc.getSelectedFile();
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-
-					try {
-						if (!file.getAbsolutePath().endsWith(".p6lib")) {
-							file = new File(file + ".p6lib");
-						}
-						FileOutputStream fos = new FileOutputStream(file);
-						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-						List<Prophet6SysexPatch> l = model.getPatches();
-
-						for (Prophet6SysexPatch patch : l) {
-							fos.write(patch.bytes);
-						}
-						fos.close();
-
-					} catch (Exception ex) {
-						ex.printStackTrace();
-					}
-				} else {
-
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-				}
-
-			}
-		});
-		menuItemSaveLibrary.setAccelerator(KeyStroke.getKeyStroke("meta S"));
-		menu.add(menuItemSaveLibrary);
-
-		menu.addSeparator();
-
-		menuItemLoadProgram = new JMenuItem("Load Program...");
-		menuItemLoadProgram.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Preferences prefs = Preferences.userNodeForPackage(getClass());
-
-				String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
-
-				final JFileChooser fc;
-
-				if (mostRecentDirectory == null)
-					fc = new JFileChooser();
-				else
-					fc = new JFileChooser(new File(mostRecentDirectory));
-
-				fc.addChoosableFileFilter(p6programFilter);
-				fc.setAcceptAllFileFilterUsed(false);
-
-				int returnVal = fc.showOpenDialog(Prophet6SoundLibrarian.this);
-
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					File file = fc.getSelectedFile();
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-
-					try {
-
-						FileInputStream fis = new FileInputStream(file);
-
-						byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
-						fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
-
-						Prophet6SoundLibrarianFileValidator.validateP6Program(buf);
-
-
-						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-						List<Prophet6SysexPatch> l = model.getPatches();
-						int selectedRow = ddl.getSelectedRow();
-
-						Prophet6SysexPatch patch = new Prophet6SysexPatch(buf);
-
-						l.set(selectedRow, patch);
-
-						fis.close();
-
-						model.fireTableDataChanged();
-
-						ddl.addRowSelectionInterval(selectedRow, selectedRow);
-
-					} catch (Exception ex) {
-						ex.printStackTrace();
-						JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file", JOptionPane.ERROR_MESSAGE);
-					}
-				} else {
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-				}
-
-			}
-		});
-		menuItemLoadProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt O"));
-
-		menu.add(menuItemLoadProgram);
-
-		menuItemSaveProgram = new JMenuItem("Save Program...");
-		menuItemSaveProgram.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Preferences prefs = Preferences.userNodeForPackage(getClass());
-
-				String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-				List<Prophet6SysexPatch> l = model.getPatches();
-
-				int selectedRow = ddl.getSelectedRow();
-				int[] selectedRows = ddl.getSelectedRows();
-
-				final JFileChooser fc;
-
-				if (mostRecentDirectory == null)
-					fc = new JFileChooser();
-				else
-					fc = new JFileChooser(new File(mostRecentDirectory));
-
-				fc.addChoosableFileFilter(p6programFilter);
-				fc.setAcceptAllFileFilterUsed(false);
-
-				if (selectedRows.length > 1) {
-
-				} else {
-					fc.setSelectedFile(new File(l.get(selectedRow).toString() + ".p6program"));
-				}
-
-				int returnVal = fc.showSaveDialog(Prophet6SoundLibrarian.this);
-
-				if (returnVal == JFileChooser.APPROVE_OPTION) {
-					File file = fc.getSelectedFile();
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-
-					try {
-						if (selectedRows.length > 1) {
-							if (file.exists() || file.mkdirs()) {
-								for (int i = 0; i < selectedRows.length; i++) {
-
-									File oneFile = new File(file, l.get(selectedRows[i]).toString() + ".p6program");
-									FileOutputStream fos = new FileOutputStream(oneFile);
-									fos.write(l.get(selectedRows[i]).bytes);
-									fos.close();
-								}
-							} else {
-								throw new Exception("Error creating directory");
-							}
-						} else {
-							if (!file.getAbsolutePath().endsWith(".p6program")) {
-								file = new File(file + ".p6program");
-							}
-
-							FileOutputStream fos = new FileOutputStream(file);
-							fos.write(l.get(selectedRow).bytes);
-							fos.close();
-						}
-
-						for (int i = 0; i < selectedRows.length; i++)
-							ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-
-					} catch (Exception ex) {
-						ex.printStackTrace();
-					}
-				} else {
-
-					String absPath = fc.getCurrentDirectory().getAbsolutePath();
-
-					prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
-				}
-
-			}
-		});
-		menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
-		menu.add(menuItemSaveProgram);
-
-		menuItemLoadProgram.setEnabled(false);
-		menuItemSaveProgram.setEnabled(false);
-
-		menubar.add(menu);
-
-		return menubar;
-	}
-
-	public JPanel createProgressArea() {
-
-		JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-
-		progressBar = new JProgressBar(0, PROPHET_6_USER_BANK_COUNT);
-		progressBar.setValue(0);
-		progressBar.setStringPainted(true);
-		progressBar.setVisible(true);
-		progressBar.setString("");
-		progressBar.setEnabled(false);
-		progressBar.setPreferredSize(new Dimension(300, 29));
-
-		panel.add(progressBar);
-
-		return panel;
-	}
-
-	public JScrollPane createDragDropList() {
-		this.ddl = new DragDropList();
-		return new JScrollPane(this.ddl);
-	}
-
-	public void setConnection(String connectionStatus, String device) {
-		if (connectionStatus.equals("DISCONNECTED") || device.equals("No Device")) {
-			connectionStatusLabel.setText("DISCONNECTED");
-			connectionStatusLabel.setForeground(Color.WHITE);
-			connectionStatusLabel.setBackground(Color.BLACK);
-
-			deviceLabel.setText("No Device");
-			setTransferAreaEnabled(false);
-		} else {
-			connectionStatusLabel.setText(connectionStatus);
-			connectionStatusLabel.setForeground(Color.BLACK);
-			connectionStatusLabel.setBackground(Color.WHITE);
-
-			deviceLabel.setText(device);
-			setTransferAreaEnabled(true);
-		}
-	}
-
-	public void setTransferAreaEnabled(boolean enabled) {
-		sendButton.setEnabled(enabled);
-		receiveButton.setEnabled(enabled);
-		sendAllButton.setEnabled(enabled);
-		receiveAllButton.setEnabled(enabled);
-	}
-
-	public void progressStart(int max) {
-		setTransferAreaEnabled(false);
-		progressBar.setValue(0);
-		progressBar.setMaximum(max);
-		progressBar.setVisible(true);
-		progressBar.setString("Loading...");
-		progressBar.setEnabled(true);
-		Prophet6SoundLibrarian.this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-	}
-
-	public void progressFinish() {
-		Prophet6SoundLibrarian.this.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-		progressBar.setValue(PROPHET_6_USER_BANK_COUNT);
-		progressBar.setString("Done!");
-
-		new java.util.Timer().schedule(new java.util.TimerTask() {
-			@Override
-			public void run() {
-				progressBar.setEnabled(false);
-				progressBar.setString("");
-				setTransferAreaEnabled(true);
-			}
-		}, 2000);
-	}
-
-	public JPanel createTransferArea() {
-
-		JPanel panel = new JPanel(new GridBagLayout());
-		panel.setBorder(new EmptyBorder(5, 0, 0, 0));
-		GridBagConstraints c = new GridBagConstraints();
-
-		JPanel sequentialPanel = new JPanel();
-		ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
-		JLabel sequentialLabel = new JLabel(sequentialIcon);
-		sequentialPanel.add(sequentialLabel);
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 0;
-		c.gridheight = 3;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-
-		panel.add(sequentialPanel, c);
-
-		final int CONNECTION_PREFERRED_WIDTH = 105;
-		final int CONNECTION_PREFERRED_HEIGHT = 17;
-
-		connectionStatusLabel = new JLabel("DISCONNECTED");
-
-		Border blackline = BorderFactory.createLineBorder(Color.black);
-		Border margin = new EmptyBorder(0, 6, 0, 6);
-		connectionStatusLabel.setBorder(new CompoundBorder(blackline, margin));
-		connectionStatusLabel.setPreferredSize(new Dimension(CONNECTION_PREFERRED_WIDTH, CONNECTION_PREFERRED_HEIGHT));
-
-		connectionStatusLabel.setFont(new Font("Verdana", Font.PLAIN, 11));
-		connectionStatusLabel.setVerticalAlignment(SwingConstants.BOTTOM);
-		connectionStatusLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		connectionStatusLabel.setOpaque(true);
-		connectionStatusLabel.setForeground(Color.WHITE);
-		connectionStatusLabel.setBackground(Color.BLACK);
-
-		deviceLabel = new JLabel("No Device");
-		deviceLabel.setFont(new Font("Verdana", Font.PLAIN, 11));
-		deviceLabel.setHorizontalAlignment(JLabel.CENTER);
-
-		deviceLabel.setPreferredSize(new Dimension(CONNECTION_PREFERRED_WIDTH, CONNECTION_PREFERRED_HEIGHT));
-
-		Prophet6Sysex.getInstance().addObserver(new Observer() {
-
-			@Override
-			public void update(String status, String target) {
-
-				if (status.equals("DISCONNECTED") || status.equals("CONNECTED"))
-					setConnection(status, target);
-			}
-		});
-
-		c.gridx = 1;
-		c.gridy = 1;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		panel.add(connectionStatusLabel, c);
-
-		c.gridx = 1;
-		c.gridy = 2;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		panel.add(deviceLabel, c);
-
-		final int BUTTON_PREFERRED_WIDTH = 99;
-		final int BUTTON_PREFERRED_HEIGHT = 29;
-
-		sendButton = new JButton("SEND");
-		sendButton.setFont(new Font("Verdana", Font.PLAIN, 11));
-		sendButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
-		sendButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-				List<Prophet6SysexPatch> l = model.getPatches();
-				int[] selectedRows = ddl.getSelectedRows();
-
-				Runnable runner = new Runnable() {
-					public void run() {
-
-						try {
-							if (selectedRows.length == 0)
-								throw new Exception("No rows selected");
-
-							Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
-
-							progressStart(selectedRows.length);
-
-							for (int i = 0; i < selectedRows.length; i++) {
-
-								progressBar.setValue(i + 1);
-								progressBar.setString("Sending..." + (i + 1) + " / " + selectedRows.length);
-
-								p6sysex.send(l.get(selectedRows[i]).bytes.clone());
-								Thread.sleep(SYSEX_SEND_DELAY_TIME);
-							}
-
-						} catch (Exception ex) {
-							ex.printStackTrace();
-						} finally {
-							ddl.clearSelection();
-
-							for (int i = 0; i < selectedRows.length; i++)
-								ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-
-							progressFinish();
-						}
-					}
-				};
-				Thread t = new Thread(runner, "Code Executer");
-				t.start();
-
-			}
-		});
-
-		receiveButton = new JButton("RECEIVE");
-		receiveButton.setFont(new Font("Verdana", Font.PLAIN, 11));
-		receiveButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
-		receiveButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-				List<Prophet6SysexPatch> l = model.getPatches();
-				int[] selectedRows = ddl.getSelectedRows();
-				try {
-					if (selectedRows.length == 0)
-						throw new Exception("No rows selected");
-
-					Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
-
-					progressStart(selectedRows.length);
-
-					synchronized (p6sysex) {
-
-						for (int i = 0; i < selectedRows.length; i++) {
-							int bankNo = l.get(selectedRows[i]).getPatchBank();
-							int progNo = l.get(selectedRows[i]).getPatchProg();
-
-							p6sysex.dumpRequest(bankNo, progNo);
-
-							progressBar.setValue(i + 1);
-							progressBar.setString("Receiving..." + (i + 1) + " / " + selectedRows.length);
-							p6sysex.wait();
-
-							Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
-
-							l.set(selectedRows[i], patch);
-						}
-
-						model.fireTableDataChanged();
-
-					}
-
-				} catch (Exception ex) {
-					ex.printStackTrace();
-				} finally {
-					ddl.clearSelection();
-
-					for (int i = 0; i < selectedRows.length; i++)
-						ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-					progressFinish();
-				}
-			}
-		});
-
-		c.gridx = 2;
-		c.gridy = 1;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.EAST;
-		c.insets = new Insets(0, 5, 0, 5);
-		panel.add(sendButton, c);
-
-		c.gridx = 2;
-		c.gridy = 2;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		c.insets = new Insets(0, 5, 0, 5);
-		panel.add(receiveButton, c);
-
-		sendAllButton = new JButton("SEND ALL");
-		sendAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
-		sendAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
-		sendAllButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-				List<Prophet6SysexPatch> l = model.getPatches();
-
-				Runnable runner = new Runnable() {
-					public void run() {
-						try {
-							Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
-
-							progressStart(PROPHET_6_USER_BANK_COUNT);
-
-							for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-
-								progressBar.setString("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
-								progressBar.setValue(i + 1);
-
-								p6sysex.send(l.get(i).bytes.clone());
-
-								Thread.sleep(SYSEX_SEND_DELAY_TIME);
-							}
-
-						} catch (Exception ex) {
-							ex.printStackTrace();
-						} finally {
-							progressFinish();
-						}
-					}
-				};
-				Thread t = new Thread(runner, "Code Executer");
-				t.start();
-
-			}
-		});
-
-		receiveAllButton = new JButton("RECEIVE ALL");
-		receiveAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
-		receiveAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
-		receiveAllButton.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-				Runnable runner = new Runnable() {
-					public void run() {
-
-						try {
-							Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
-
-							synchronized (p6sysex) {
-								List<Prophet6SysexPatch> newList = new ArrayList<>();
-
-								progressStart(PROPHET_6_USER_BANK_COUNT);
-
-								for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-									int bankNo = i / 100;
-									int progNo = i % 100;
-									p6sysex.dumpRequest(bankNo, progNo);
-
-									progressBar.setValue(i + 1);
-									progressBar.setString("Receiving..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
-									p6sysex.wait();
-
-									Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
-
-									newList.add(patch);
-								}
-								model.setPatches(newList);
-								model.fireTableDataChanged();
-								ddl.addRowSelectionInterval(0, 0);
-
-							}
-
-						} catch (Exception ex) {
-							ex.printStackTrace();
-						} finally {
-							progressFinish();
-						}
-					}
-				};
-				Thread t = new Thread(runner, "Code Executer");
-				t.start();
-
-			}
-		});
-
-		c.gridx = 3;
-		c.gridy = 1;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		c.insets = new Insets(0, 5, 0, 5);
-		panel.add(sendAllButton, c);
-
-		c.gridx = 3;
-		c.gridy = 2;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		c.insets = new Insets(0, 5, 0, 5);
-		panel.add(receiveAllButton, c);
-
-		setTransferAreaEnabled(false);
-
-		JLabel programsLabel = new JLabel("PROGRAMS");
-		programsLabel.setFont(new Font("Verdana", Font.PLAIN, 10));
-		programsLabel.setVerticalAlignment(SwingConstants.TOP);
-		programsLabel.setHorizontalAlignment(SwingConstants.CENTER);
-		programsLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.gray));
-
-		c.gridx = 2;
-		c.gridy = 0;
-		c.gridheight = 1;
-		c.gridwidth = 2;
-		c.anchor = GridBagConstraints.BASELINE;
-		c.insets = new Insets(0, 5, 0, 5);
-		panel.add(programsLabel, c);
-
-		return panel;
-	}
+	static FileNameExtensionFilter p6libraryFilter = new FileNameExtensionFilter("Prophet 6 Library Files (*.p6lib)",
+			"p6lib");
+	static FileNameExtensionFilter p6programFilter = new FileNameExtensionFilter(
+			"Prophet 6 Program Files (*.p6program)", "p6program");
 
 	public Prophet6SoundLibrarian() {
 		super();
-
-		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-		setAlignmentX(Component.LEFT_ALIGNMENT);
-
-		add(createTransferArea());
-		add(createProgressArea());
-		add(createDragDropList());
-		add(createEditor());
 	}
 
-	public class NameField extends JTextField {
-		private static final long serialVersionUID = 1L;
-		public int currentIndex = -1;
+	private void createAndShowGUI() {
 
-		public void setCurrentIndex(int index) {
-			this.currentIndex = index;
-		}
+		Prophet6SoundLibrarianMainFrame mainFrame = new Prophet6SoundLibrarianMainFrame("Prophet 6 Sound Librarian");
+		Prophet6SoundLibrarianMergeFrame mergeFrame = new Prophet6SoundLibrarianMergeFrame("Merge");
 
-		public int getCurrentIndex() {
-			return this.currentIndex;
-		}
-	}
+		JPanel mainPanel = new JPanel();
+		mainPanel.setOpaque(true);
+		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+		mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-	public class NameFieldFocusListener implements FocusListener {
+		mainPanel.add(mainFrame.createTransferArea());
+		mainPanel.add(mainFrame.createProgressArea());
+		mainPanel.add(mainFrame.createDragDropList());
+		mainPanel.add(mainFrame.createEditor());
 
-		public int lastCaretPosition = -1;
+		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		mainFrame.setContentPane(mainPanel);
 
-		@Override
-		public void focusGained(FocusEvent e) {
-		}
+		mainFrame.setJMenuBar(new Prophet6SoundLibrarianMenuBar());
 
-		@Override
-		public void focusLost(FocusEvent e) {
-			if (e.getCause() == Cause.TRAVERSAL_FORWARD || e.getCause() == Cause.TRAVERSAL_BACKWARD) {
-				if (nameField.getCurrentIndex() != -1) {
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
-					int[] selectedRows = ddl.getSelectedRows();
+		mainFrame.pack();
+		mainFrame.setVisible(true);
 
-					l.get(nameField.getCurrentIndex()).setPatchName(nameField.getText());
-					model.fireTableDataChanged();
-
-					for (int i = 0; i < selectedRows.length; i++) {
-						ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-					}
-
-				}
-			} else if (e.getCause() == Cause.UNKNOWN) {
-
-				if (nameField.getCurrentIndex() != -1) {
-					int currentIndex = nameField.getCurrentIndex();
-
-					int[] selectedRows = ddl.getSelectedRows();
-
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
-
-					l.get(currentIndex).setPatchName(nameField.getText());
-					model.fireTableDataChanged();
-
-					for (int i = 0; i < selectedRows.length; i++) {
-						ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-					}
-				}
-			}
-		}
-
-		public void setLastCaretPosition(int pos) {
-			this.lastCaretPosition = pos;
-		}
-
-		public int getLastCaretPosition() {
-			return this.lastCaretPosition;
-		}
-
-	}
-
-	private JPanel createEditor() {
-		JPanel panel = new JPanel(new BorderLayout());
-
-		nameField = new NameField();
-		AbstractDocument ad = (AbstractDocument) nameField.getDocument();
-
-		nameField.addFocusListener(nffl);
-		nameField.addActionListener(new ActionListener() {
-
-			@Override
-			public void actionPerformed(ActionEvent e) {
-
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-				List<Prophet6SysexPatch> l = model.getPatches();
-				int selectedRow = ddl.getSelectedRow();
-				int[] selectedRows = ddl.getSelectedRows();
-				l.get(selectedRow).setPatchName(((JTextField) e.getSource()).getText());
-				model.fireTableDataChanged();
-
-				for (int i = 0; i < selectedRows.length; i++) {
-					ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-				}
-			}
-		});
-		ad.setDocumentFilter(new DocumentFilter() {
-			@Override
-			public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
-					throws BadLocationException {
-
-				if (fb.getDocument().getLength() + string.length() > SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH) {
-					return;
-				}
-				super.insertString(fb, offset, string, attr);
-			}
-
-			@Override
-			public void replace(DocumentFilter.FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
-					throws BadLocationException {
-				int documentLength = fb.getDocument().getLength();
-				if (documentLength - length + text.length() <= SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH)
-					super.replace(fb, offset, length, text, attrs);
-			}
-		});
-		nameField.setFont(new Font("Verdana", Font.PLAIN, 11));
-		panel.add(nameField, BorderLayout.CENTER);
-		TitledBorder tb = BorderFactory.createTitledBorder("Patch Name");
-		tb.setTitleFont(new Font("Verdana", Font.PLAIN, 11));
-		panel.setBorder(tb);
-		return panel;
-
-	}
-
-	void setPanelEnabled(JPanel panel, Boolean isEnabled) {
-		panel.setEnabled(isEnabled);
-
-		Component[] components = panel.getComponents();
-
-		for (Component component : components) {
-			if (component instanceof JPanel) {
-				setPanelEnabled((JPanel) component, isEnabled);
-			}
-			component.setEnabled(isEnabled);
-		}
-	}
-
-	private static void createAndShowGUI() {
-		JFrame frame = new JFrame("Prophet 6 Sound Librarian");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		JComponent newContentPane = new Prophet6SoundLibrarian();
-		newContentPane.setOpaque(true);
-		frame.setContentPane(newContentPane);
-
-		frame.setJMenuBar(((Prophet6SoundLibrarian) newContentPane).createMenuBar());
-
-		frame.pack();
-		frame.setVisible(true);
+		this.mainFrame = mainFrame;
+		this.mergeFrame = mergeFrame;
 	}
 
 	public static void main(String args[]) {
+
+		Prophet6SoundLibrarian p6librarian = new Prophet6SoundLibrarian();
 
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
@@ -955,7 +1646,7 @@ public class Prophet6SoundLibrarian extends JPanel {
 
 				// Turn off metal's use of bold fonts
 				UIManager.put("swing.boldMetal", Boolean.FALSE);
-				createAndShowGUI();
+				p6librarian.createAndShowGUI();
 				try {
 					Prophet6Sysex.getInstance().rescanDevices();
 				} catch (Exception e) {
@@ -980,213 +1671,28 @@ public class Prophet6SoundLibrarian extends JPanel {
 		return sb.toString();
 	}
 
-	public class DragDropList extends JTable implements ClipboardOwner {
-		private static final long serialVersionUID = 1L;
-		Prophet6SysexTableItemModel model;
+	public static class Prophet6SoundLibrarianMergeDragStateManager {
+		private static Prophet6SoundLibrarianMergeDragStateManager instance = null;
+		private boolean isDragging = false;
 
-		public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
-			Component returnComp = super.prepareRenderer(renderer, row, column);
-			Color alternateColor = new Color(252, 242, 206);
-			Color whiteColor = Color.WHITE;
-			if (!returnComp.getBackground().equals(getSelectionBackground())) {
-				Color bg = (row % 2 == 0 ? alternateColor : whiteColor);
-				returnComp.setBackground(bg);
-				bg = null;
-			}
+		private Prophet6SoundLibrarianMergeDragStateManager() {
+			super();
 
-			return returnComp;
-		};
-
-		public DragDropList() {
-			super(new Prophet6SysexTableItemModel());
-			model = (Prophet6SysexTableItemModel) getModel();
-
-			setDropMode(DropMode.INSERT_ROWS);
-			setFillsViewportHeight(true);
-			getTableHeader().setReorderingAllowed(false);
-
-			setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
-			UIManager.put("Table.dropLineColor", Color.cyan);
-			UIManager.put("Table.dropLineShortColor", Color.cyan);
-
-			setDragEnabled(true);
-			setTransferHandler(new MyListDropHandler(this));
-
-			getColumnModel().getColumn(0).setPreferredWidth(60);
-			getColumnModel().getColumn(0).setMinWidth(60);
-			getColumnModel().getColumn(1).setPreferredWidth(600);
-
-			getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "table-tab");
-			getActionMap().put("table-tab", new AbstractAction() {
-
-				private static final long serialVersionUID = 1L;
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					KeyboardFocusManager manager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-					manager.focusNextComponent();
-				}
-			});
-
-			getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-
-				@Override
-				public void valueChanged(ListSelectionEvent e) {
-					if (!e.getValueIsAdjusting()) {
-						int[] selectedRows = getSelectedRows();
-						if (selectedRows.length > 1) {
-							Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
-							nameField.setCurrentIndex(selectedRows[0]);
-							nameField.setText(patch.getPatchName().replaceAll("\\s+$", ""));
-							nameField.setEnabled(true);
-							menuItemLoadProgram.setEnabled(false);
-							menuItemSaveProgram.setEnabled(true);
-						} else if (selectedRows.length == 1) {
-							Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
-							nameField.setCurrentIndex(selectedRows[0]);
-							nameField.setText(patch.getPatchName().replaceAll("\\s+$", ""));
-							nameField.setEnabled(true);
-							menuItemLoadProgram.setEnabled(true);
-							menuItemSaveProgram.setEnabled(true);
-						} else if (selectedRows.length == 0) {
-							nameField.setCurrentIndex(-1);
-							nameField.setText("");
-							nameField.setEnabled(false);
-							menuItemLoadProgram.setEnabled(false);
-							menuItemSaveProgram.setEnabled(false);
-						}
-					}
-				}
-			});
-			getInputMap().put(KeyStroke.getKeyStroke("meta C"), "copy");
-			getActionMap().put("copy", new AbstractAction() {
-
-				private static final long serialVersionUID = 1L;
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-
-					Clipboard c = Toolkit.getDefaultToolkit().getSystemClipboard();
-
-					Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
-					List<Prophet6SysexPatch> patches = dlm.getPatches();
-					int selectedRow = getSelectedRow();
-
-					Prophet6SysexPatchSelection selection = new Prophet6SysexPatchSelection(patches.get(selectedRow));
-					c.setContents(selection, DragDropList.this);
-				}
-			});
-			getInputMap().put(KeyStroke.getKeyStroke("meta V"), "paste");
-			getActionMap().put("paste", new AbstractAction() {
-
-				private static final long serialVersionUID = 1L;
-
-				@Override
-				public void actionPerformed(ActionEvent e) {
-
-					Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-					Transferable content = clipboard.getContents(DragDropList.this);
-
-					boolean hasTransferable = (content != null)
-							&& content.isDataFlavorSupported(Prophet6SysexPatchSelection.dmselFlavor);
-					if (hasTransferable) {
-						try {
-							Prophet6SysexPatch result = (Prophet6SysexPatch) content
-									.getTransferData(Prophet6SysexPatchSelection.dmselFlavor);
-
-							Prophet6SysexPatch clone = (Prophet6SysexPatch) result.clone();
-							Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
-							List<Prophet6SysexPatch> patches = dlm.getPatches();
-							int selectedRow = getSelectedRow();
-							patches.set(selectedRow, clone);
-							dlm.fireTableDataChanged();
-							ddl.addRowSelectionInterval(selectedRow, selectedRow);
-
-						} catch (Exception ex) {
-							ex.printStackTrace();
-						}
-					}
-				}
-			});
 		}
 
-		@Override
-		public void lostOwnership(Clipboard clipboard, Transferable contents) {
-			System.out.println("DragDropList Clipboard: Lost ownership");
+		public static Prophet6SoundLibrarianMergeDragStateManager getInstance() {
+			if (instance == null)
+				instance = new Prophet6SoundLibrarianMergeDragStateManager();
+
+			return instance;
 		}
 
-	}
-
-	class MyListDropHandler extends TransferHandler {
-		private static final long serialVersionUID = 1L;
-		DragDropList list;
-
-		public MyListDropHandler(DragDropList list) {
-			this.list = list;
+		public void setDragging(boolean dragging) {
+			this.isDragging = dragging;
 		}
 
-		protected Transferable createTransferable(JComponent c) {
-			StringSelection transferable = new StringSelection(Integer.toString(list.getSelectedRow()));
-
-			return transferable;
-		}
-
-		public int getSourceActions(JComponent c) {
-			return COPY_OR_MOVE;
-		}
-
-		public boolean canImport(TransferHandler.TransferSupport support) {
-			if (!support.isDataFlavorSupported(DataFlavor.stringFlavor)) {
-				return false;
-			}
-			JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
-
-			if (dl.getRow() == -1) {
-				return false;
-			} else {
-				return true;
-			}
-		}
-
-		public boolean importData(TransferHandler.TransferSupport support) {
-			if (!canImport(support)) {
-				return false;
-			}
-
-			try {
-				JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
-				int dropTargetIndex = dl.getRow();
-
-				DragDropList dpl = (DragDropList) support.getComponent();
-				Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) dpl.getModel();
-
-				int[] selectedRows = dpl.getSelectedRows();
-
-				List<Prophet6SysexPatch> patches = dlm.getPatches();
-
-				List<Prophet6SysexPatch> selectedObjects = new ArrayList<Prophet6SysexPatch>();
-				List<Prophet6SysexPatch> selectedObjectClones = new ArrayList<Prophet6SysexPatch>();
-
-				for (int i = 0; i < selectedRows.length; i++) {
-					Prophet6SysexPatch patch = patches.get(selectedRows[i]);
-					selectedObjects.add(patch);
-					selectedObjectClones.add((Prophet6SysexPatch) patch.clone());
-				}
-				patches.addAll(dropTargetIndex, selectedObjectClones);
-				patches.removeAll(selectedObjects);
-
-				dlm.fireTableDataChanged();
-
-				int cloneIndex = patches.indexOf(selectedObjectClones.get(0));
-				ddl.addRowSelectionInterval(cloneIndex, cloneIndex + selectedObjectClones.size() - 1);
-
-				dlm.updateAllPatchNumbers();
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return true;
+		public boolean isDragging() {
+			return this.isDragging;
 		}
 	}
 
@@ -1552,6 +2058,75 @@ public class Prophet6SoundLibrarian extends JPanel {
 		}
 	}
 
+	public static class Prophet6SysexDummySelection implements Transferable {
+
+		private static DataFlavor dmselFlavor = new DataFlavor(Object.class, "Prophet 6 Sysex Dummy data flavor");
+		private Object selection;
+
+		public Prophet6SysexDummySelection(Object selection) {
+			this.selection = selection;
+		}
+
+		// Transferable implementation
+
+		@Override
+		public DataFlavor[] getTransferDataFlavors() {
+			DataFlavor[] ret = { dmselFlavor };
+			return ret;
+		}
+
+		@Override
+		public boolean isDataFlavorSupported(DataFlavor flavor) {
+			return dmselFlavor.equals(flavor);
+		}
+
+		@Override
+		public synchronized Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException {
+			if (isDataFlavorSupported(flavor)) {
+				return this.selection;
+			} else {
+				throw new UnsupportedFlavorException(dmselFlavor);
+			}
+		}
+	}
+
+	public static class Prophet6SysexPatchMultiSelection implements Transferable {
+
+		private static DataFlavor multiPatchFlavor = new DataFlavor(List.class,
+				"Prophet 6 Sysex Multiple Patch data flavor");
+
+		private List<Prophet6SysexPatch> selection;
+
+		public Prophet6SysexPatchMultiSelection(List<Prophet6SysexPatch> selection) {
+			this.selection = selection;
+		}
+
+		// Transferable implementation
+
+		@Override
+		public DataFlavor[] getTransferDataFlavors() {
+			DataFlavor[] ret = { multiPatchFlavor };
+			return ret;
+		}
+
+		@Override
+		public boolean isDataFlavorSupported(DataFlavor flavor) {
+			return Arrays.asList(getTransferDataFlavors()).contains(flavor);
+		}
+
+		@Override
+		public synchronized Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException {
+			if (isDataFlavorSupported(flavor)) {
+				if (flavor.equals(multiPatchFlavor))
+					return this.selection;
+				else
+					return null;
+			} else {
+				throw new UnsupportedFlavorException(flavor);
+			}
+		}
+	}
+
 	public static class Prophet6SysexPatchSelection implements Transferable, ClipboardOwner {
 
 		private static DataFlavor dmselFlavor = new DataFlavor(Prophet6SysexPatch.class,
@@ -1694,4 +2269,5 @@ public class Prophet6SoundLibrarian extends JPanel {
 		}
 
 	}
+
 }
