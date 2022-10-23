@@ -839,9 +839,9 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					MergeTable table = (MergeTable) mergeIntoTable;
-					
+
 					Prophet6SysexTableItemModel model;
-					
+
 					model = (Prophet6SysexTableItemModel) table.getModel();
 
 					List<Prophet6SysexPatch> mergeSource = model.getPatches();
@@ -1094,7 +1094,6 @@ public class Prophet6SoundLibrarian {
 					}
 				});
 
-
 				getColumnModel().getColumn(0).setPreferredWidth(60);
 				getColumnModel().getColumn(0).setMinWidth(60);
 				getColumnModel().getColumn(1).setPreferredWidth(600);
@@ -1142,6 +1141,7 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemMergeLibrary;
 		JMenuItem menuItemLoadProgram;
 		JMenuItem menuItemSaveProgram;
+		JMenuItem menuItemMergeSysex;
 
 		public Prophet6SoundLibrarianMenuBar() {
 			JMenu menu = new JMenu("File");
@@ -1420,7 +1420,7 @@ public class Prophet6SoundLibrarian {
 								l.set(i++, patch);
 
 								fis.close();
-								
+
 							}
 
 							model.fireTableDataChanged();
@@ -1525,6 +1525,76 @@ public class Prophet6SoundLibrarian {
 			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
 			menu.add(menuItemSaveProgram);
 
+			menu.addSeparator();
+
+			menuItemMergeSysex = new JMenuItem("Merge Sysex...");
+			menuItemMergeSysex.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					Preferences prefs = Preferences.userNodeForPackage(getClass());
+
+					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
+
+					final JFileChooser fc;
+
+					if (mostRecentDirectory == null)
+						fc = new JFileChooser();
+					else
+						fc = new JFileChooser(new File(mostRecentDirectory));
+
+					fc.addChoosableFileFilter(p6sysexFilter);
+					fc.setAcceptAllFileFilterUsed(false);
+					fc.setDialogTitle("Select File To Merge");
+
+					int returnVal = fc.showOpenDialog(mainFrame);
+
+					if (returnVal == JFileChooser.APPROVE_OPTION) {
+						File file = fc.getSelectedFile();
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+
+						try {
+
+							FileInputStream fis = new FileInputStream(file);
+
+							byte[] buf = fis.readAllBytes();
+
+							fis.close();
+
+							Prophet6SoundLibrarianFileValidator.validateP6SysEx(buf);
+
+							List<Prophet6SysexPatch> newList = new ArrayList<>();
+
+							for (int i = 0; i < buf.length / PROPHET_6_SYSEX_LENGTH; i++) {
+								byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
+										(i + 1) * PROPHET_6_SYSEX_LENGTH);
+								Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
+
+								newList.add(patch);
+							}
+
+							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mergeFrame.mergeFromTable
+									.getModel();
+							model.setPatches(newList);
+
+							mergeFrame.open();
+
+						} catch (Exception ex) {
+							ex.printStackTrace();
+							JOptionPane.showMessageDialog(null, ex.getMessage(), "Error opening file",
+									JOptionPane.ERROR_MESSAGE);
+						}
+					} else {
+						String absPath = fc.getCurrentDirectory().getAbsolutePath();
+
+						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
+					}
+
+				}
+			});
+			menu.add(menuItemMergeSysex);
+
 			menuItemLoadProgram.setEnabled(false);
 			menuItemSaveProgram.setEnabled(false);
 
@@ -1541,6 +1611,7 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemMergeLibrary;
 		JMenuItem menuItemLoadProgram;
 		JMenuItem menuItemSaveProgram;
+		JMenuItem menuItemMergeSysex;
 
 		public Prophet6SoundLibrarianDummyMenuBar() {
 			JMenu menu = new JMenu("File");
@@ -1578,6 +1649,12 @@ public class Prophet6SoundLibrarian {
 			menuItemSaveProgram.setEnabled(false);
 			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
 			menu.add(menuItemSaveProgram);
+			
+			menu.addSeparator();
+						
+			menuItemMergeSysex = new JMenuItem("Merge Sysex...");
+			menuItemMergeSysex.setEnabled(false);
+			menu.add(menuItemMergeSysex);
 
 			add(menu);
 		}
@@ -1604,6 +1681,8 @@ public class Prophet6SoundLibrarian {
 			"p6lib");
 	static FileNameExtensionFilter p6programFilter = new FileNameExtensionFilter(
 			"Prophet 6 Program Files (*.p6program)", "p6program");
+	static FileNameExtensionFilter p6sysexFilter = new FileNameExtensionFilter("Prophet 6 SysEx Files (*.syx)",
+			"syx");
 
 	public Prophet6SoundLibrarian() {
 		super();
@@ -1706,6 +1785,16 @@ public class Prophet6SoundLibrarian {
 	}
 
 	public static class Prophet6SoundLibrarianFileValidator {
+
+		public static void validateP6SysEx(byte[] bytes) throws Exception {
+			if (bytes.length % PROPHET_6_SYSEX_LENGTH != 0)
+				throw new Exception("Invalid Prophet 6 Sysex File:  Invalid Byte Length");
+			for (int i = 0; i < bytes.length / PROPHET_6_SYSEX_LENGTH; i++) {
+				byte[] slice = Arrays.copyOfRange(bytes, i * PROPHET_6_SYSEX_LENGTH, (i + 1) * PROPHET_6_SYSEX_LENGTH);
+				validateP6Program(slice);
+			}
+		}
+
 		public static void validateP6Library(byte[] bytes) throws Exception {
 			if (bytes.length != PROPHET_6_SYSEX_LENGTH * PROPHET_6_USER_BANK_COUNT)
 				throw new Exception("Invalid Prophet 6 Library File:  Invalid Byte Length");
