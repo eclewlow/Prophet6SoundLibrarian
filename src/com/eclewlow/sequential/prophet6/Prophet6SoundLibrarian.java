@@ -1387,32 +1387,41 @@ public class Prophet6SoundLibrarian {
 					fc.addChoosableFileFilter(p6programFilter);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Select File(s) For Import");
+					fc.setMultiSelectionEnabled(true);
 
 					int returnVal = fc.showOpenDialog(mainFrame);
 
 					if (returnVal == JFileChooser.APPROVE_OPTION) {
-						File file = fc.getSelectedFile();
+						File files[] = fc.getSelectedFiles();
 						String absPath = fc.getCurrentDirectory().getAbsolutePath();
 						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
 
 						try {
-
-							FileInputStream fis = new FileInputStream(file);
-
-							byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
-							fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
-
-							Prophet6SoundLibrarianFileValidator.validateP6Program(buf);
-
 							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
 							List<Prophet6SysexPatch> l = model.getPatches();
 							int selectedRow = mainFrame.ddl.getSelectedRow();
 
-							Prophet6SysexPatch patch = new Prophet6SysexPatch(buf);
+							int i = selectedRow;
 
-							l.set(selectedRow, patch);
+							for (File f : files) {
 
-							fis.close();
+								if (i >= model.getRowCount() || i < 0)
+									break;
+
+								FileInputStream fis = new FileInputStream(f);
+
+								byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
+								fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
+
+								Prophet6SoundLibrarianFileValidator.validateP6Program(buf);
+
+								Prophet6SysexPatch patch = new Prophet6SysexPatch(buf);
+
+								l.set(i++, patch);
+
+								fis.close();
+								
+							}
 
 							model.fireTableDataChanged();
 
