@@ -5,6 +5,14 @@ Prophet 6 Sound Librarian for organizing patches on the Sequential Circuits Prop
 
 Prophet6SoundLibrarian would not be possible without the Mac Java MIDI SysEx implementation that Derek Cook has so arduously developed.  The library can be found here https://github.com/DerekCook/CoreMidi4J.  CoreMidi4J is provided similarly under the Eclipse Public License 1.0.
 
+## System Requirements
+
+Requirements as far as I know:
+- JRE 14.0.1
+- Mac OS Monterey (12.6)
+
+I've only tested this on my Mac.  It may work from n other systems.
+
 ## Installation
 
 ### Standalone Prophet 6 Sound Librarian download
