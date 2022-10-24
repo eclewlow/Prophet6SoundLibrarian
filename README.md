@@ -11,7 +11,7 @@ Requirements as far as I know:
 - JRE 14.0.1
 - Mac OS Monterey (12.6)
 
-I've only tested this on my Mac.  It may work from on other systems.
+I've only tested this on my Mac.  It may work on other systems.
 
 ## Installation
 
