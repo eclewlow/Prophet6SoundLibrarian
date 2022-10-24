@@ -1,5 +1,5 @@
 # Prophet6SoundLibrarian
-Prophet 6 Sound Librarian for organizing patches on the Sequential Circuits Prophet 6
+Prophet 6 Sound Librarian for Sequential Circuits Prophet 6 patches.
 
 [![License](https://img.shields.io/badge/License-Eclipse%20Public%20License%202.0-blue.svg)](#license)
 
