@@ -382,7 +382,10 @@ public class Prophet6SoundLibrarian {
 		}
 
 		private JPanel createEditor() {
-			JPanel panel = new JPanel(new BorderLayout());
+			JPanel panel = new JPanel(new GridBagLayout());
+
+			GridBagConstraints c = new GridBagConstraints();
+
 
 			nameField = new NameField();
 			AbstractDocument ad = (AbstractDocument) nameField.getDocument();
@@ -425,7 +428,19 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 			nameField.setFont(new Font("Verdana", Font.PLAIN, 11));
-			panel.add(nameField, BorderLayout.CENTER);
+			
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 1.0;
+			c.weighty = 0.0;
+
+			panel.add(nameField, c);
+
 			TitledBorder tb = BorderFactory.createTitledBorder("Patch Name");
 			tb.setTitleFont(new Font("Verdana", Font.PLAIN, 11));
 			panel.setBorder(tb);
@@ -847,28 +862,34 @@ public class Prophet6SoundLibrarian {
 
 			GridBagConstraints c = new GridBagConstraints();
 
-			c.fill = GridBagConstraints.HORIZONTAL;
+			c.fill = GridBagConstraints.BOTH;
 			c.gridx = 0;
 			c.gridy = 0;
 			c.gridheight = 1;
 			c.gridwidth = 1;
 			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 1.0;
+			c.weighty = 1.0;
 			mergePanel.add(new JScrollPane(mergeFromTable), c);
 
-			c.fill = GridBagConstraints.HORIZONTAL;
+			c.fill = GridBagConstraints.BOTH;
 			c.gridx = 1;
 			c.gridy = 0;
 			c.gridheight = 1;
 			c.gridwidth = 1;
 			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 1.0;
+			c.weighty = 1.0;
 			mergePanel.add(new JScrollPane(mergeIntoTable), c);
 
-			c.fill = GridBagConstraints.HORIZONTAL;
+			c.fill = GridBagConstraints.NONE;
 			c.gridx = 0;
 			c.gridy = 1;
 			c.gridheight = 1;
 			c.gridwidth = 2;
 			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
 			JButton mergeButton = new JButton("Merge");
 			mergeButton.addActionListener(new ActionListener() {
 
@@ -1730,13 +1751,55 @@ public class Prophet6SoundLibrarian {
 
 		JPanel mainPanel = new JPanel();
 		mainPanel.setOpaque(true);
-		mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+		mainPanel.setLayout(new GridBagLayout());
 		mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		
+		GridBagConstraints c = new GridBagConstraints();
 
-		mainPanel.add(mainFrame.createTransferArea());
-		mainPanel.add(mainFrame.createProgressArea());
-		mainPanel.add(mainFrame.createDragDropList());
-		mainPanel.add(mainFrame.createEditor());
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 0;
+		c.gridheight = 1;
+		c.gridwidth = 1;
+		c.anchor = GridBagConstraints.BASELINE;
+		c.weightx = 1.0;
+		c.weighty = 0.0;
+
+		mainPanel.add(mainFrame.createTransferArea(), c);
+
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 1;
+		c.gridheight = 1;
+		c.gridwidth = 1;
+		c.anchor = GridBagConstraints.BASELINE;
+		c.weightx = 1.0;
+		c.weighty = 0.0;
+
+		mainPanel.add(mainFrame.createProgressArea(), c);
+
+		c.fill = GridBagConstraints.BOTH;
+		c.gridx = 0;
+		c.gridy = 2;
+		c.gridheight = 1;
+		c.gridwidth = 1;
+		c.anchor = GridBagConstraints.BASELINE;
+		c.weightx = 1.0;
+		c.weighty = 1.0;
+
+		mainPanel.add(mainFrame.createDragDropList(), c);
+
+		c.fill = GridBagConstraints.HORIZONTAL;
+		c.gridx = 0;
+		c.gridy = 3;
+		c.gridheight = 1;
+		c.gridwidth = 1;
+		c.anchor = GridBagConstraints.BASELINE;
+		c.weightx = 1.0;
+		c.weighty = 0.0;
+
+		mainPanel.add(mainFrame.createEditor(), c);
 
 		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		mainFrame.setContentPane(mainPanel);
