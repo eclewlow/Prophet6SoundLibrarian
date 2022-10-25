@@ -185,6 +185,42 @@ public class Prophet6SoundLibrarian {
 					}
 				});
 
+				getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "table-row-delete");
+				getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SPACE, 0), "table-row-delete");
+				getActionMap().put("table-row-delete", new AbstractAction() {
+
+					private static final long serialVersionUID = 1L;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						int[] selectedRows = getSelectedRows();
+						if (selectedRows.length == 0)
+							return;
+
+						Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
+						List<Prophet6SysexPatch> patches = dlm.getPatches();
+
+						int n = JOptionPane.showConfirmDialog(mainFrame,
+								"The selected program(s) will be initialized, continue?", "Initialize Program",
+								JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+						if (n == JOptionPane.OK_OPTION) {
+							for (int i = 0; i < selectedRows.length; i++) {
+								Prophet6SysexPatch initPatch = new Prophet6SysexPatch(
+										Prophet6SysexPatch.INIT_PATCH_BYTES);
+
+								patches.set(selectedRows[i], initPatch);
+
+							}
+							dlm.fireTableDataChanged();
+							for (int i = 0; i < selectedRows.length; i++) {
+								ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+							}
+						} else if (n == JOptionPane.CANCEL_OPTION) {
+
+						}
+					}
+				});
+
 				getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
 					@Override
@@ -1649,9 +1685,9 @@ public class Prophet6SoundLibrarian {
 			menuItemSaveProgram.setEnabled(false);
 			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
 			menu.add(menuItemSaveProgram);
-			
+
 			menu.addSeparator();
-						
+
 			menuItemMergeSysex = new JMenuItem("Merge Sysex...");
 			menuItemMergeSysex.setEnabled(false);
 			menu.add(menuItemMergeSysex);
@@ -1681,8 +1717,7 @@ public class Prophet6SoundLibrarian {
 			"p6lib");
 	static FileNameExtensionFilter p6programFilter = new FileNameExtensionFilter(
 			"Prophet 6 Program Files (*.p6program)", "p6program");
-	static FileNameExtensionFilter p6sysexFilter = new FileNameExtensionFilter("Prophet 6 SysEx Files (*.syx)",
-			"syx");
+	static FileNameExtensionFilter p6sysexFilter = new FileNameExtensionFilter("Prophet 6 SysEx Files (*.syx)", "syx");
 
 	public Prophet6SoundLibrarian() {
 		super();
