@@ -48,7 +48,6 @@ public class Prophet6SoundLibrarian {
 		JButton receiveAllButton;
 		JButton auditionSendButton;
 
-		JProgressBar progressBar;
 		DragDropList ddl;
 		NameFieldFocusListener nffl = new NameFieldFocusListener();
 
@@ -238,7 +237,7 @@ public class Prophet6SoundLibrarian {
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(false);
 								menuBar.menuItemSaveProgram.setEnabled(true);
-								if (Prophet6Sysex.getInstance().isConnected() && !progressBar.isEnabled()) {
+								if (Prophet6Sysex.getInstance().isConnected()) {
 									sendButton.setEnabled(true);
 									receiveButton.setEnabled(true);
 									auditionSendButton.setEnabled(true);
@@ -250,7 +249,7 @@ public class Prophet6SoundLibrarian {
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(true);
 								menuBar.menuItemSaveProgram.setEnabled(true);
-								if (Prophet6Sysex.getInstance().isConnected() && !progressBar.isEnabled()) {
+								if (Prophet6Sysex.getInstance().isConnected()) {
 									sendButton.setEnabled(true);
 									receiveButton.setEnabled(true);
 									auditionSendButton.setEnabled(true);
@@ -461,23 +460,6 @@ public class Prophet6SoundLibrarian {
 
 		}
 
-		public JPanel createProgressArea() {
-
-			JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-
-			progressBar = new JProgressBar(0, PROPHET_6_USER_BANK_COUNT);
-			progressBar.setValue(0);
-			progressBar.setStringPainted(true);
-			progressBar.setVisible(true);
-			progressBar.setString("");
-			progressBar.setEnabled(false);
-			progressBar.setPreferredSize(new Dimension(300, 29));
-
-			panel.add(progressBar);
-
-			return panel;
-		}
-
 		public JScrollPane createDragDropList() {
 			this.ddl = new DragDropList();
 			return new JScrollPane(this.ddl);
@@ -513,32 +495,6 @@ public class Prophet6SoundLibrarian {
 				receiveButton.setEnabled(enabled);
 				auditionSendButton.setEnabled(enabled);
 			}
-		}
-
-		public void progressStart(int max) {
-			setTransferAreaEnabled(false);
-			progressBar.setValue(0);
-			progressBar.setMaximum(max);
-			progressBar.setVisible(true);
-			progressBar.setString("Loading...");
-			progressBar.setEnabled(true);
-			setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-		}
-
-		public void progressFinish() {
-			setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-			progressBar.setValue(PROPHET_6_USER_BANK_COUNT);
-			progressBar.setString("Done!");
-
-			new java.util.Timer().schedule(new java.util.TimerTask() {
-				@Override
-				public void run() {
-					progressBar.setEnabled(false);
-					progressBar.setString("");
-					setTransferAreaEnabled(true);
-				}
-			}, 2000);
 		}
 
 		public JPanel createTransferArea() {
@@ -639,7 +595,11 @@ public class Prophet6SoundLibrarian {
 					List<Prophet6SysexPatch> l = model.getPatches();
 					int[] selectedRows = ddl.getSelectedRows();
 
-					Runnable runner = new Runnable() {
+					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
+							selectedRows.length);
+					dialog.setRunnable(new Runnable() {
+
+						@Override
 						public void run() {
 
 							try {
@@ -648,12 +608,10 @@ public class Prophet6SoundLibrarian {
 
 								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
 
-								progressStart(selectedRows.length);
-
 								for (int i = 0; i < selectedRows.length; i++) {
 
-									progressBar.setValue(i + 1);
-									progressBar.setString("Sending..." + (i + 1) + " / " + selectedRows.length);
+									dialog.setProgressBarValue(i + 1);
+									dialog.setProgressText("Sending..." + (i + 1) + " / " + selectedRows.length);
 
 									p6sysex.send(l.get(selectedRows[i]).bytes.clone());
 									Thread.sleep(SYSEX_SEND_DELAY_TIME);
@@ -661,19 +619,19 @@ public class Prophet6SoundLibrarian {
 
 							} catch (Exception ex) {
 								ex.printStackTrace();
+								if (dialog.isVisible())
+									dialog.setVisible(false);
+								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error sending patch(es)",
+										JOptionPane.ERROR_MESSAGE);
 							} finally {
 								ddl.clearSelection();
 
 								for (int i = 0; i < selectedRows.length; i++)
 									ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-
-								progressFinish();
 							}
 						}
-					};
-					Thread t = new Thread(runner, "Code Executer");
-					t.start();
-
+					});
+					dialog.showAndRun();
 				}
 			});
 
@@ -684,49 +642,62 @@ public class Prophet6SoundLibrarian {
 			receiveButton.addActionListener(new ActionListener() {
 
 				@Override
-				public void actionPerformed(ActionEvent e) {
+				public synchronized void actionPerformed(ActionEvent e) {
 
 					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
 					List<Prophet6SysexPatch> l = model.getPatches();
 					int[] selectedRows = ddl.getSelectedRows();
-					try {
-						if (selectedRows.length == 0)
-							throw new Exception("No rows selected");
 
-						Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
+							selectedRows.length);
+					dialog.setRunnable(new Runnable() {
 
-						progressStart(selectedRows.length);
+						@Override
+						public void run() {
 
-						synchronized (p6sysex) {
+							try {
+								if (selectedRows.length == 0)
+									throw new Exception("No rows selected");
 
-							for (int i = 0; i < selectedRows.length; i++) {
-								int bankNo = l.get(selectedRows[i]).getPatchBank();
-								int progNo = l.get(selectedRows[i]).getPatchProg();
+								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
 
-								p6sysex.dumpRequest(bankNo, progNo);
+								synchronized (p6sysex) {
 
-								progressBar.setValue(i + 1);
-								progressBar.setString("Receiving..." + (i + 1) + " / " + selectedRows.length);
-								p6sysex.wait();
+									for (int i = 0; i < selectedRows.length; i++) {
+										int bankNo = l.get(selectedRows[i]).getPatchBank();
+										int progNo = l.get(selectedRows[i]).getPatchProg();
 
-								Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
+										p6sysex.dumpRequest(bankNo, progNo);
 
-								l.set(selectedRows[i], patch);
+										dialog.setProgressBarValue(i + 1);
+										dialog.setProgressText("Receiving..." + (i + 1) + " / " + selectedRows.length);
+
+										p6sysex.wait();
+
+										Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
+
+										l.set(selectedRows[i], patch);
+									}
+
+									model.fireTableDataChanged();
+
+								}
+
+							} catch (Exception ex) {
+								ex.printStackTrace();
+								if (dialog.isVisible())
+									dialog.setVisible(false);
+								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error receiving patch(es)",
+										JOptionPane.ERROR_MESSAGE);
+							} finally {
+								ddl.clearSelection();
+
+								for (int i = 0; i < selectedRows.length; i++)
+									ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
 							}
-
-							model.fireTableDataChanged();
-
 						}
-
-					} catch (Exception ex) {
-						ex.printStackTrace();
-					} finally {
-						ddl.clearSelection();
-
-						for (int i = 0; i < selectedRows.length; i++)
-							ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-						progressFinish();
-					}
+					});
+					dialog.showAndRun();
 				}
 			});
 
@@ -742,17 +713,20 @@ public class Prophet6SoundLibrarian {
 					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
 					List<Prophet6SysexPatch> l = model.getPatches();
 
-					Runnable runner = new Runnable() {
+					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
+							PROPHET_6_USER_BANK_COUNT);
+					dialog.setRunnable(new Runnable() {
+
+						@Override
 						public void run() {
+
 							try {
 								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
 
-								progressStart(PROPHET_6_USER_BANK_COUNT);
-
 								for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 
-									progressBar.setString("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
-									progressBar.setValue(i + 1);
+									dialog.setProgressBarValue(i + 1);
+									dialog.setProgressText("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
 
 									p6sysex.send(l.get(i).bytes.clone());
 
@@ -761,14 +735,16 @@ public class Prophet6SoundLibrarian {
 
 							} catch (Exception ex) {
 								ex.printStackTrace();
+								if (dialog.isVisible())
+									dialog.setVisible(false);
+								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error sending all patches",
+										JOptionPane.ERROR_MESSAGE);
+
 							} finally {
-								progressFinish();
 							}
 						}
-					};
-					Thread t = new Thread(runner, "Code Executer");
-					t.start();
-
+					});
+					dialog.showAndRun();
 				}
 			});
 
@@ -782,25 +758,28 @@ public class Prophet6SoundLibrarian {
 				public void actionPerformed(ActionEvent e) {
 
 					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					Runnable runner = new Runnable() {
-						public void run() {
 
+					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
+							PROPHET_6_USER_BANK_COUNT);
+					dialog.setRunnable(new Runnable() {
+
+						@Override
+						public synchronized void run() {
 							try {
 								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
 
 								synchronized (p6sysex) {
 									List<Prophet6SysexPatch> newList = new ArrayList<>();
 
-									progressStart(PROPHET_6_USER_BANK_COUNT);
-
 									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 										int bankNo = i / 100;
 										int progNo = i % 100;
 										p6sysex.dumpRequest(bankNo, progNo);
 
-										progressBar.setValue(i + 1);
-										progressBar.setString(
+										dialog.setProgressBarValue(i + 1);
+										dialog.setProgressText(
 												"Receiving..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
+
 										p6sysex.wait();
 
 										Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
@@ -809,20 +788,21 @@ public class Prophet6SoundLibrarian {
 									}
 									model.setPatches(newList);
 									model.fireTableDataChanged();
-									ddl.addRowSelectionInterval(0, 0);
-
 								}
 
 							} catch (Exception ex) {
 								ex.printStackTrace();
+								if (dialog.isVisible())
+									dialog.setVisible(false);
+								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error receiving all patches",
+										JOptionPane.ERROR_MESSAGE);
 							} finally {
-								progressFinish();
+								ddl.clearSelection();
+								ddl.addRowSelectionInterval(0, 0);
 							}
 						}
-					};
-					Thread t = new Thread(runner, "Code Executer");
-					t.start();
-
+					});
+					dialog.showAndRun();
 				}
 			});
 
@@ -917,38 +897,40 @@ public class Prophet6SoundLibrarian {
 					List<Prophet6SysexPatch> l = model.getPatches();
 					int[] selectedRows = ddl.getSelectedRows();
 
-					Runnable runner = new Runnable() {
-						public void run() {
+					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(1);
+					dialog.setRunnable(new Runnable() {
 
+						@Override
+						public void run() {
 							try {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
 								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
 
-								progressStart(1);
-
-								progressBar.setValue(1);
-								progressBar.setString("Sending..." + (1) + " / " + selectedRows.length);
+								dialog.setProgressBarValue(1);
+								dialog.setProgressText("Sending..." + (1) + " / " + selectedRows.length);
 
 								p6sysex.send(l.get(selectedRows[0]).getPatchAuditionBytes());
+
 								Thread.sleep(SYSEX_SEND_DELAY_TIME);
 
 							} catch (Exception ex) {
 								ex.printStackTrace();
+								if (dialog.isVisible())
+									dialog.setVisible(false);
+								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error auditioning patch",
+										JOptionPane.ERROR_MESSAGE);
 							} finally {
 								ddl.clearSelection();
 
 								if (selectedRows.length > 0)
 									ddl.addRowSelectionInterval(selectedRows[0], selectedRows[0]);
-
-								progressFinish();
 							}
-						}
-					};
-					Thread t = new Thread(runner, "Code Executer");
-					t.start();
 
+						}
+					});
+					dialog.showAndRun();
 				}
 			});
 
@@ -1001,6 +983,58 @@ public class Prophet6SoundLibrarian {
 			return panel;
 		}
 
+		public class Prophet6SoundLibrarianProgressDialog extends JDialog {
+			private static final long serialVersionUID = 1L;
+			private JLabel progressText;
+			JProgressBar progressBar;
+
+			private Runnable runnable;
+
+			public Prophet6SoundLibrarianProgressDialog(int max) {
+				super(mainFrame, "Progress Dialog", true);
+
+				this.progressBar = new JProgressBar(0, max);
+				add(BorderLayout.CENTER, this.progressBar);
+
+				this.progressText = new JLabel("Progress...");
+				add(BorderLayout.NORTH, this.progressText);
+
+				setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+				setSize(300, 75);
+				setLocationRelativeTo(mainFrame);
+				setUndecorated(true);
+
+				JPanel dp = (JPanel) getContentPane();
+				dp.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+			}
+
+			public void setRunnable(Runnable runnable) {
+				this.runnable = runnable;
+			}
+
+			public void setProgressText(String text) {
+				this.progressText.setText(text);
+			}
+
+			public void setProgressBarValue(int value) {
+				this.progressBar.setValue(value);
+			}
+
+			public void showAndRun() {
+				Thread t = new Thread(new Runnable() {
+
+					@Override
+					public void run() {
+						if (runnable != null)
+							runnable.run();
+						setVisible(false);
+						;
+					}
+				});
+				t.start();
+				setVisible(true);
+			}
+		}
 	}
 
 	public class Prophet6SoundLibrarianMergeFrame extends JFrame {
@@ -1928,20 +1962,9 @@ public class Prophet6SoundLibrarian {
 
 		mainPanel.add(mainFrame.createTransferArea(), c);
 
-		c.fill = GridBagConstraints.HORIZONTAL;
-		c.gridx = 0;
-		c.gridy = 1;
-		c.gridheight = 1;
-		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		c.weightx = 1.0;
-		c.weighty = 0.0;
-
-		mainPanel.add(mainFrame.createProgressArea(), c);
-
 		c.fill = GridBagConstraints.BOTH;
 		c.gridx = 0;
-		c.gridy = 2;
+		c.gridy = 1;
 		c.gridheight = 1;
 		c.gridwidth = 1;
 		c.anchor = GridBagConstraints.BASELINE;
@@ -1952,7 +1975,7 @@ public class Prophet6SoundLibrarian {
 
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridx = 0;
-		c.gridy = 3;
+		c.gridy = 2;
 		c.gridheight = 1;
 		c.gridwidth = 1;
 		c.anchor = GridBagConstraints.BASELINE;
