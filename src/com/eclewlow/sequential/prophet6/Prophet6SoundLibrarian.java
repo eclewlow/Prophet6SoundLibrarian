@@ -46,6 +46,7 @@ public class Prophet6SoundLibrarian {
 		JButton receiveButton;
 		JButton sendAllButton;
 		JButton receiveAllButton;
+		JButton auditionSendButton;
 
 		JProgressBar progressBar;
 		DragDropList ddl;
@@ -237,6 +238,11 @@ public class Prophet6SoundLibrarian {
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(false);
 								menuBar.menuItemSaveProgram.setEnabled(true);
+								if (Prophet6Sysex.getInstance().isConnected() && !progressBar.isEnabled()) {
+									sendButton.setEnabled(true);
+									receiveButton.setEnabled(true);
+									auditionSendButton.setEnabled(true);
+								}
 							} else if (selectedRows.length == 1) {
 								Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
 								nameField.setCurrentIndex(selectedRows[0]);
@@ -244,12 +250,21 @@ public class Prophet6SoundLibrarian {
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(true);
 								menuBar.menuItemSaveProgram.setEnabled(true);
+								if (Prophet6Sysex.getInstance().isConnected() && !progressBar.isEnabled()) {
+									sendButton.setEnabled(true);
+									receiveButton.setEnabled(true);
+									auditionSendButton.setEnabled(true);
+								}
 							} else if (selectedRows.length == 0) {
 								nameField.setCurrentIndex(-1);
 								nameField.setText("");
 								nameField.setEnabled(false);
 								menuBar.menuItemLoadProgram.setEnabled(false);
 								menuBar.menuItemSaveProgram.setEnabled(false);
+								sendButton.setEnabled(false);
+								receiveButton.setEnabled(false);
+								auditionSendButton.setEnabled(false);
+
 							}
 						}
 					}
@@ -386,7 +401,6 @@ public class Prophet6SoundLibrarian {
 
 			GridBagConstraints c = new GridBagConstraints();
 
-
 			nameField = new NameField();
 			AbstractDocument ad = (AbstractDocument) nameField.getDocument();
 
@@ -428,7 +442,6 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 			nameField.setFont(new Font("Verdana", Font.PLAIN, 11));
-			
 
 			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 0;
@@ -489,10 +502,17 @@ public class Prophet6SoundLibrarian {
 		}
 
 		public void setTransferAreaEnabled(boolean enabled) {
-			sendButton.setEnabled(enabled);
-			receiveButton.setEnabled(enabled);
 			sendAllButton.setEnabled(enabled);
 			receiveAllButton.setEnabled(enabled);
+			if (!enabled) {
+				sendButton.setEnabled(enabled);
+				receiveButton.setEnabled(enabled);
+				auditionSendButton.setEnabled(enabled);
+			} else if (Prophet6Sysex.getInstance().isConnected() && mainFrame.ddl.getSelectedRowCount() > 0) {
+				sendButton.setEnabled(enabled);
+				receiveButton.setEnabled(enabled);
+				auditionSendButton.setEnabled(enabled);
+			}
 		}
 
 		public void progressStart(int max) {
@@ -524,18 +544,27 @@ public class Prophet6SoundLibrarian {
 		public JPanel createTransferArea() {
 
 			JPanel panel = new JPanel(new GridBagLayout());
+
 			panel.setBorder(new EmptyBorder(5, 0, 0, 0));
+
 			GridBagConstraints c = new GridBagConstraints();
 
 			JPanel sequentialPanel = new JPanel();
+
 			ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+
 			JLabel sequentialLabel = new JLabel(sequentialIcon);
+
 			sequentialPanel.add(sequentialLabel);
-			c.fill = GridBagConstraints.HORIZONTAL;
+
+			c.fill = GridBagConstraints.NONE;
 			c.gridx = 0;
 			c.gridy = 0;
 			c.gridheight = 3;
 			c.gridwidth = 1;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			c.insets = new Insets(0, 10, 0, 20);
 			c.anchor = GridBagConstraints.BASELINE;
 
 			panel.add(sequentialPanel, c);
@@ -574,18 +603,24 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 
+			c.fill = GridBagConstraints.NONE;
 			c.gridx = 1;
 			c.gridy = 1;
 			c.gridheight = 1;
 			c.gridwidth = 1;
 			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
 			panel.add(connectionStatusLabel, c);
 
+			c.fill = GridBagConstraints.NONE;
 			c.gridx = 1;
 			c.gridy = 2;
 			c.gridheight = 1;
 			c.gridwidth = 1;
 			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
 			panel.add(deviceLabel, c);
 
 			final int BUTTON_PREFERRED_WIDTH = 99;
@@ -695,22 +730,6 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 
-			c.gridx = 2;
-			c.gridy = 1;
-			c.gridheight = 1;
-			c.gridwidth = 1;
-			c.anchor = GridBagConstraints.EAST;
-			c.insets = new Insets(0, 5, 0, 5);
-			panel.add(sendButton, c);
-
-			c.gridx = 2;
-			c.gridy = 2;
-			c.gridheight = 1;
-			c.gridwidth = 1;
-			c.anchor = GridBagConstraints.BASELINE;
-			c.insets = new Insets(0, 5, 0, 5);
-			panel.add(receiveButton, c);
-
 			sendAllButton = new JButton("SEND ALL");
 			sendAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
 			sendAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
@@ -807,23 +826,64 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 
-			c.gridx = 3;
+			JPanel transferButtons = new JPanel(new GridBagLayout());
+
+			c.insets = new Insets(0, 20, 0, 0);
+
+			c.fill = GridBagConstraints.NONE;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE_TRAILING;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			transferButtons.add(sendButton, c);
+
+			c.fill = GridBagConstraints.NONE;
+			c.gridx = 0;
 			c.gridy = 1;
 			c.gridheight = 1;
 			c.gridwidth = 1;
-			c.anchor = GridBagConstraints.BASELINE;
-			c.insets = new Insets(0, 5, 0, 5);
-			panel.add(sendAllButton, c);
+			c.anchor = GridBagConstraints.BASELINE_TRAILING;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			transferButtons.add(receiveButton, c);
 
-			c.gridx = 3;
-			c.gridy = 2;
+			c.insets = new Insets(0, 0, 0, 20);
+
+			c.fill = GridBagConstraints.NONE;
+			c.gridx = 1;
+			c.gridy = 0;
 			c.gridheight = 1;
 			c.gridwidth = 1;
-			c.anchor = GridBagConstraints.BASELINE;
-			c.insets = new Insets(0, 5, 0, 5);
-			panel.add(receiveAllButton, c);
+			c.anchor = GridBagConstraints.BASELINE_LEADING;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			transferButtons.add(sendAllButton, c);
 
-			setTransferAreaEnabled(false);
+			c.fill = GridBagConstraints.NONE;
+			c.gridx = 1;
+			c.gridy = 1;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE_LEADING;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			transferButtons.add(receiveAllButton, c);
+
+			c.insets = new Insets(0, 0, 0, 0);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 2;
+			c.gridy = 1;
+			c.gridheight = 2;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+
+			panel.add(transferButtons, c);
 
 			JLabel programsLabel = new JLabel("PROGRAMS");
 			programsLabel.setFont(new Font("Verdana", Font.PLAIN, 10));
@@ -831,13 +891,112 @@ public class Prophet6SoundLibrarian {
 			programsLabel.setHorizontalAlignment(SwingConstants.CENTER);
 			programsLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.gray));
 
+			c.insets = new Insets(0, 10, 0, 10);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
 			c.gridx = 2;
 			c.gridy = 0;
 			c.gridheight = 1;
-			c.gridwidth = 2;
+			c.gridwidth = 1;
 			c.anchor = GridBagConstraints.BASELINE;
-			c.insets = new Insets(0, 5, 0, 5);
+			c.weightx = 0.0;
+			c.weighty = 0.0;
 			panel.add(programsLabel, c);
+
+			auditionSendButton = new JButton("SEND");
+			auditionSendButton.setFont(new Font("Verdana", Font.PLAIN, 11));
+			auditionSendButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
+			auditionSendButton.setMinimumSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
+
+			auditionSendButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+
+					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
+					int[] selectedRows = ddl.getSelectedRows();
+
+					Runnable runner = new Runnable() {
+						public void run() {
+
+							try {
+								if (selectedRows.length == 0)
+									throw new Exception("No rows selected");
+
+								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+
+								progressStart(1);
+
+								progressBar.setValue(1);
+								progressBar.setString("Sending..." + (1) + " / " + selectedRows.length);
+
+								p6sysex.send(l.get(selectedRows[0]).getPatchAuditionBytes());
+								Thread.sleep(SYSEX_SEND_DELAY_TIME);
+
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							} finally {
+								ddl.clearSelection();
+
+								if (selectedRows.length > 0)
+									ddl.addRowSelectionInterval(selectedRows[0], selectedRows[0]);
+
+								progressFinish();
+							}
+						}
+					};
+					Thread t = new Thread(runner, "Code Executer");
+					t.start();
+
+				}
+			});
+
+			JPanel audtionButtons = new JPanel(new GridBagLayout());
+
+			c.insets = new Insets(0, 20, 0, 20);
+
+			c.fill = GridBagConstraints.NONE;
+			c.gridx = 0;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			audtionButtons.add(auditionSendButton, c);
+
+			c.insets = new Insets(0, 0, 0, 0);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 3;
+			c.gridy = 1;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			panel.add(audtionButtons, c);
+
+			JLabel auditionLabel = new JLabel("AUDITION");
+			auditionLabel.setFont(new Font("Verdana", Font.PLAIN, 10));
+			auditionLabel.setVerticalAlignment(SwingConstants.TOP);
+			auditionLabel.setHorizontalAlignment(SwingConstants.CENTER);
+			auditionLabel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.gray));
+
+			c.insets = new Insets(0, 10, 0, 10);
+
+			c.fill = GridBagConstraints.HORIZONTAL;
+			c.gridx = 3;
+			c.gridy = 0;
+			c.gridheight = 1;
+			c.gridwidth = 1;
+			c.anchor = GridBagConstraints.BASELINE;
+			c.weightx = 0.0;
+			c.weighty = 0.0;
+			panel.add(auditionLabel, c);
+
+			setTransferAreaEnabled(false);
 
 			return panel;
 		}
@@ -1725,6 +1884,8 @@ public class Prophet6SoundLibrarian {
 	private static final int SYSEX_BYTE_OFFSET_PATCH_PROG = 5;
 	private static final int SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA = 6;
 	private static final int PROPHET_6_SYSEX_LENGTH = 1178;
+	private static final int PROPHET_6_EDIT_BUFFER_LENGTH = 1176;
+	private static final int SYSEX_EDIT_BUFFER_BYTE_OFFSET_PACKED_MIDI_DATA = 4;
 	private static final int SYSEX_PACKED_MIDI_DATA_LENGTH = 1171;
 	private static final int SYSEX_PACKED_MIDI_LAST_PACKET_LENGTH = 3;
 	private static final int SYSEX_UNPACKED_MIDI_DATA_LENGTH = 1024;
@@ -1753,20 +1914,19 @@ public class Prophet6SoundLibrarian {
 		mainPanel.setOpaque(true);
 		mainPanel.setLayout(new GridBagLayout());
 		mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-		
+
 		GridBagConstraints c = new GridBagConstraints();
 
-		c.fill = GridBagConstraints.HORIZONTAL;
+		c.fill = GridBagConstraints.NONE;
 		c.gridx = 0;
 		c.gridy = 0;
 		c.gridheight = 1;
 		c.gridwidth = 1;
-		c.anchor = GridBagConstraints.BASELINE;
-		c.weightx = 1.0;
+		c.anchor = GridBagConstraints.BASELINE_LEADING;
+		c.weightx = 0.0;
 		c.weighty = 0.0;
 
 		mainPanel.add(mainFrame.createTransferArea(), c);
-
 
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridx = 0;
@@ -1807,6 +1967,7 @@ public class Prophet6SoundLibrarian {
 		mainFrame.setJMenuBar(new Prophet6SoundLibrarianMenuBar());
 
 		mainFrame.pack();
+
 		mainFrame.setVisible(true);
 
 		this.mainFrame = mainFrame;
@@ -2094,6 +2255,18 @@ public class Prophet6SoundLibrarian {
 			patch.packedMIDIData = this.packedMIDIData.clone();
 			patch.inputData = this.inputData.clone();
 			return patch;
+		}
+
+		public byte[] getPatchAuditionBytes() {
+			byte[] auditionData = new byte[PROPHET_6_EDIT_BUFFER_LENGTH];
+			auditionData[0] = (byte) 0xf0;
+			auditionData[1] = (byte) 0x01;
+			auditionData[2] = (byte) 0x2d;
+			auditionData[3] = (byte) 0x03;
+			System.arraycopy(this.packedMIDIData, 0, auditionData, SYSEX_EDIT_BUFFER_BYTE_OFFSET_PACKED_MIDI_DATA,
+					SYSEX_PACKED_MIDI_DATA_LENGTH);
+			auditionData[PROPHET_6_EDIT_BUFFER_LENGTH - 1] = (byte) 0xf7;
+			return auditionData;
 		}
 
 		public void setPatchName(String s) {

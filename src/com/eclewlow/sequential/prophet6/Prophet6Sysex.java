@@ -156,27 +156,6 @@ public class Prophet6Sysex {
 		inDevice.close();
 	}
 
-	public void sendMultiple(List<byte[]> l) throws Exception {
-
-		if (inDevice == null)
-			throw new Exception("Midi Device not instantiated");
-
-
-		long timeStamp = -1;
-
-		inDevice.open();
-		MidiDeviceReceiver receiver = (MidiDeviceReceiver) inDevice.getReceiver();
-
-		for (int i = 0; i < l.size(); i++) {
-			SysexMessage sysexMsg = new SysexMessage();
-			sysexMsg.setMessage(l.get(i), l.get(i).length);
-
-			receiver.send(sysexMsg, timeStamp);
-		}
-
-		inDevice.close();
-	}
-
 	public static boolean isCoreMidiLoaded() throws CoreMidiException {
 		return CoreMidiDeviceProvider.isLibraryLoaded();
 	}
