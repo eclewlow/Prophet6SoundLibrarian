@@ -28,7 +28,7 @@ Then simply double click the JAR file and the Prophet6SoundLibrarian window shou
 
 On opening the Prophet6SoundLibrarian JAR file, the main window should appear as below.
 
-<img width="720" alt="Screen Shot 2022-10-19 at 2 42 14 AM" src="https://user-images.githubusercontent.com/32854625/196656599-d5dc152b-a263-4934-a2b5-3d4c8b69deb9.png">
+![image](https://user-images.githubusercontent.com/32854625/197933512-fcd7af4a-7ddf-483e-b5e0-4d505a685dd4.png)
 
 The Prophet6SoundLibrarian allows for transferring user bank/programs to and from the Prophet 6 synthesizer.  Currently supported files for merge are .syx and .p6lib (a Prophet6SoundLibrarian format file) files.
 It also allows for reordering single patches or group-selected patches, renaming patches, saving an entire 500-user-patch library (`*.p6lib` file), saving single or multiple-selected programs (`*.p6program` file), and loading both `p6lib` and `p6program` files.  It also allows for merging a .p6lib library or Prophet 6 .syx file into the current working library. 
