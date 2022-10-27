@@ -585,7 +585,7 @@ public class Prophet6SoundLibrarian {
 			sendButton = new JButton("SEND");
 			sendButton.setFont(new Font("Verdana", Font.PLAIN, 11));
 			sendButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
+			sendButton.setFocusable(false);
 			sendButton.addActionListener(new ActionListener() {
 
 				@Override
@@ -638,7 +638,7 @@ public class Prophet6SoundLibrarian {
 			receiveButton = new JButton("RECEIVE");
 			receiveButton.setFont(new Font("Verdana", Font.PLAIN, 11));
 			receiveButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
+			receiveButton.setFocusable(false);
 			receiveButton.addActionListener(new ActionListener() {
 
 				@Override
@@ -694,6 +694,8 @@ public class Prophet6SoundLibrarian {
 
 								for (int i = 0; i < selectedRows.length; i++)
 									ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
+								
+								ddl.requestFocus();
 							}
 						}
 					});
@@ -704,7 +706,7 @@ public class Prophet6SoundLibrarian {
 			sendAllButton = new JButton("SEND ALL");
 			sendAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
 			sendAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
+			sendAllButton.setFocusable(false);
 			sendAllButton.addActionListener(new ActionListener() {
 
 				@Override
@@ -751,7 +753,7 @@ public class Prophet6SoundLibrarian {
 			receiveAllButton = new JButton("RECEIVE ALL");
 			receiveAllButton.setFont(new Font("Verdana", Font.PLAIN, 11));
 			receiveAllButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
+			receiveAllButton.setFocusable(false);
 			receiveAllButton.addActionListener(new ActionListener() {
 
 				@Override
@@ -887,7 +889,7 @@ public class Prophet6SoundLibrarian {
 			auditionSendButton.setFont(new Font("Verdana", Font.PLAIN, 11));
 			auditionSendButton.setPreferredSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
 			auditionSendButton.setMinimumSize(new Dimension(BUTTON_PREFERRED_WIDTH, BUTTON_PREFERRED_HEIGHT));
-
+			auditionSendButton.setFocusable(false);
 			auditionSendButton.addActionListener(new ActionListener() {
 
 				@Override
