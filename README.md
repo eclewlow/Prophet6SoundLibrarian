@@ -17,12 +17,14 @@ I've only tested this on my Mac.  It may work on other systems.
 
 ### Standalone Prophet 6 Sound Librarian download
 
-You can download the standalone jar
+1. You can download the standalone jar
 from the
 [releases](https://github.com/eclewlow/Prophet6SoundLibrarian/releases) page.
 [![jar](https://img.shields.io/github/downloads/eclewlow/Prophet6SoundLibrarian/total.svg)](https://github.com/eclewlow/Prophet6SoundLibrarian/releases)
 
-Then simply double click the JAR file and the Prophet6SoundLibrarian window should appear
+2. Double click the JAR file.
+3. You may have to open System Settings -> Security to allow the application to be opened.
+4. The Prophet6SoundLibrarian window should appear.
 
 ## Using Prophet6SoundLibrarian
 
