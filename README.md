@@ -52,7 +52,7 @@ Also, the buttons in the TRANSFER area will change from disabled to enabled.
 4. It is now safe to freely edit without worrying about your most recent Prophet 6 user banks, as you can easily load them from the `.p6lib` backup you just created and click Send All to restore the Prophet 6 user banks.
 5. Happy editing!
 
-### Transfer Buttons
+### PROGRAMS area
 
 - `Receive All` - read all 500 user bank patches from the Prophet 6.  `IMPORTANT!`  This will overwrite the entire current working library.
 
@@ -61,3 +61,8 @@ Also, the buttons in the TRANSFER area will change from disabled to enabled.
 - `Receive` - receive from the connected Prophet 6 the currently selected working library bank/programs. `IMPORTANT!` This will overwrite the selected user banks in the current working library.
 
 - `Send` - write to the connected Prophet 6 the currently selected working library bank/programs.  `IMPORTANT!` This will write the currently selected bank/programs to the respective Prophet 6 bank/program numbers.
+
+
+### AUDITION area
+
+- `Send` - send the currently selected working library patch to the Prophet 6 edit buffer.  This will allow you to play the patch on the Prophet 6 without overwriting any of the bank/programs.
