@@ -8,8 +8,8 @@ Prophet6SoundLibrarian would not be possible without the Mac Java MIDI SysEx imp
 ## System Requirements
 
 Requirements as far as I know:
-- JRE 14.0.1
-- Mac OS Monterey (12.6)
+- JRE 14+
+- Mac OS Ventura (13.0)
 
 I've only tested this on my Mac.  It may work on other systems.
 
