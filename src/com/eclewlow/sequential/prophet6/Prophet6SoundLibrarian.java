@@ -686,9 +686,6 @@ public class Prophet6SoundLibrarian {
 
 										l.set(selectedRows[i], patch);
 									}
-
-									model.fireTableDataChanged();
-
 								}
 
 							} catch (Exception ex) {
@@ -698,6 +695,8 @@ public class Prophet6SoundLibrarian {
 								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error receiving patch(es)",
 										JOptionPane.ERROR_MESSAGE);
 							} finally {
+								model.fireTableDataChanged();
+
 								ddl.clearSelection();
 
 								for (int i = 0; i < selectedRows.length; i++)
@@ -768,6 +767,7 @@ public class Prophet6SoundLibrarian {
 				public void actionPerformed(ActionEvent e) {
 
 					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
+					List<Prophet6SysexPatch> l = model.getPatches();
 
 					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
 							PROPHET_6_USER_BANK_COUNT);
@@ -779,8 +779,6 @@ public class Prophet6SoundLibrarian {
 								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
 
 								synchronized (p6sysex) {
-									List<Prophet6SysexPatch> newList = new ArrayList<>();
-
 									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 										int bankNo = i / 100;
 										int progNo = i % 100;
@@ -803,10 +801,8 @@ public class Prophet6SoundLibrarian {
 
 										Prophet6SysexPatch patch = new Prophet6SysexPatch(readBytes);
 
-										newList.add(patch);
+										l.set(i, patch);
 									}
-									model.setPatches(newList);
-									model.fireTableDataChanged();
 								}
 
 							} catch (Exception ex) {
@@ -816,6 +812,8 @@ public class Prophet6SoundLibrarian {
 								JOptionPane.showMessageDialog(null, ex.getMessage(), "Error receiving all patches",
 										JOptionPane.ERROR_MESSAGE);
 							} finally {
+								model.fireTableDataChanged();
+
 								ddl.clearSelection();
 								ddl.addRowSelectionInterval(0, 0);
 							}
