@@ -672,9 +672,17 @@ public class Prophet6SoundLibrarian {
 										dialog.setProgressBarValue(i + 1);
 										dialog.setProgressText("Receiving..." + (i + 1) + " / " + selectedRows.length);
 
-										p6sysex.wait();
+										p6sysex.wait(1000);
 
-										Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
+										byte[] readBytes = p6sysex.getReadBytes();
+
+										if (readBytes == null) {
+											p6sysex.cleanupTransmitter();
+											throw new Exception(
+													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
+										}
+
+										Prophet6SysexPatch patch = new Prophet6SysexPatch(readBytes);
 
 										l.set(selectedRows[i], patch);
 									}
@@ -694,7 +702,7 @@ public class Prophet6SoundLibrarian {
 
 								for (int i = 0; i < selectedRows.length; i++)
 									ddl.addRowSelectionInterval(selectedRows[i], selectedRows[i]);
-								
+
 								ddl.requestFocus();
 							}
 						}
@@ -782,9 +790,18 @@ public class Prophet6SoundLibrarian {
 										dialog.setProgressText(
 												"Receiving..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
 
-										p6sysex.wait();
+										p6sysex.wait(1000);
 
-										Prophet6SysexPatch patch = new Prophet6SysexPatch(p6sysex.getReadBytes());
+										byte[] readBytes = p6sysex.getReadBytes();
+
+										if (readBytes == null) {
+											p6sysex.cleanupTransmitter();
+
+											throw new Exception(
+													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
+										}
+
+										Prophet6SysexPatch patch = new Prophet6SysexPatch(readBytes);
 
 										newList.add(patch);
 									}

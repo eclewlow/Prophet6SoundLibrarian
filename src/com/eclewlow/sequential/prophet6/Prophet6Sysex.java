@@ -20,6 +20,7 @@ public class Prophet6Sysex {
 
 	MidiDevice inDevice = null;
 	MidiDevice outDevice = null;
+	MidiDeviceTransmitter transmitter = null;
 
 	private byte[] readBytes;
 
@@ -71,16 +72,26 @@ public class Prophet6Sysex {
 	}
 
 	public void setOutDevice(MidiDevice out) throws Exception {
+		if (out == null && outDevice != null && outDevice.isOpen())
+			outDevice.close();
 		outDevice = out;
 
-		if (out == null)
+		if (out == null) {
+			if (this.transmitter != null) {
+				this.transmitter.setReceiver(null);
+				this.transmitter.close();
+			}
+			this.transmitter = null;
 			return;
-		outDevice.open();
-		MidiDeviceTransmitter transmitter = (MidiDeviceTransmitter) outDevice.getTransmitter();
+		}
+	}
 
-		TransmitterReceiver tr = new TransmitterReceiver(outDevice, transmitter);
-
-		transmitter.setReceiver(tr);
+	public void cleanupTransmitter() {
+		if (transmitter != null) {
+			transmitter.setReceiver(null);
+			transmitter.close();
+		}
+		this.transmitter = null;
 	}
 
 	public void dumpRequest(int bankNo, int progNo) throws Exception {
@@ -99,31 +110,48 @@ public class Prophet6Sysex {
 			if (outDevice == null)
 				throw new Exception("Midi Device not instantiated");
 
+			if (!outDevice.isOpen())
+				outDevice.open();
+
+			this.transmitter = (MidiDeviceTransmitter) outDevice.getTransmitter();
+
+			TransmitterReceiver tr = new TransmitterReceiver();
+
+			transmitter.setReceiver(null);
+			transmitter.setReceiver(tr);
+
+			setReadBytes(null);
+
 			send(msg);
-		} catch (Exception e) {
+
+		} catch (
+
+		Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	class TransmitterReceiver implements Receiver {
 
-		MidiDeviceTransmitter transmitter;
-		MidiDevice outDevice;
-
-		public TransmitterReceiver(MidiDevice outDevice, MidiDeviceTransmitter transmitter) {
-			this.transmitter = transmitter;
-			this.outDevice = outDevice;
+		public TransmitterReceiver() {
 		}
 
 		@Override
 		public void send(MidiMessage message, long timeStamp) {
 
 			if (message instanceof SysexMessage) {
+
 				byte[] msg = message.getMessage();
 
 				synchronized (Prophet6Sysex.getInstance()) {
 					try {
 						setReadBytes(msg);
+
+						if (transmitter != null) {
+							transmitter.setReceiver(null);
+							transmitter.close();
+						}
+						transmitter = null;
 
 						Prophet6Sysex.getInstance().notify();
 
@@ -131,13 +159,13 @@ public class Prophet6Sysex {
 						e.printStackTrace();
 					}
 				}
-
 			}
 		}
 
 		@Override
 		public void close() {
 		}
+
 	}
 
 	public void send(byte[] msg) throws Exception {
@@ -149,11 +177,13 @@ public class Prophet6Sysex {
 		sysexMsg.setMessage(msg, msg.length);
 
 		inDevice.open();
+
 		MidiDeviceReceiver receiver = (MidiDeviceReceiver) inDevice.getReceiver();
 
 		receiver.send(sysexMsg, timeStamp);
 
 		inDevice.close();
+
 	}
 
 	public static boolean isCoreMidiLoaded() throws CoreMidiException {
