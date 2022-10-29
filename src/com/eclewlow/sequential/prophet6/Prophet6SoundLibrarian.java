@@ -667,17 +667,26 @@ public class Prophet6SoundLibrarian {
 										int bankNo = l.get(selectedRows[i]).getPatchBank();
 										int progNo = l.get(selectedRows[i]).getPatchProg();
 
-										p6sysex.dumpRequest(bankNo, progNo);
-
 										dialog.setProgressBarValue(i + 1);
 										dialog.setProgressText("Receiving..." + (i + 1) + " / " + selectedRows.length);
 
-										p6sysex.wait(1000);
+										byte[] readBytes = null;
 
-										byte[] readBytes = p6sysex.getReadBytes();
+										for (int j = 0; j < MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT; j++) {
+
+											p6sysex.dumpRequest(bankNo, progNo);
+
+											p6sysex.wait(MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS);
+
+											readBytes = p6sysex.getReadBytes();
+
+											if (readBytes != null)
+												break;
+
+											p6sysex.cleanupTransmitter();
+										}
 
 										if (readBytes == null) {
-											p6sysex.cleanupTransmitter();
 											throw new Exception(
 													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
 										}
@@ -782,19 +791,28 @@ public class Prophet6SoundLibrarian {
 									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 										int bankNo = i / 100;
 										int progNo = i % 100;
-										p6sysex.dumpRequest(bankNo, progNo);
 
 										dialog.setProgressBarValue(i + 1);
 										dialog.setProgressText(
 												"Receiving..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
 
-										p6sysex.wait(1000);
+										byte[] readBytes = null;
 
-										byte[] readBytes = p6sysex.getReadBytes();
+										for (int j = 0; j < MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT; j++) {
+
+											p6sysex.dumpRequest(bankNo, progNo);
+
+											p6sysex.wait(MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS);
+
+											readBytes = p6sysex.getReadBytes();
+
+											if (readBytes != null)
+												break;
+
+											p6sysex.cleanupTransmitter();
+										}
 
 										if (readBytes == null) {
-											p6sysex.cleanupTransmitter();
-
 											throw new Exception(
 													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
 										}
@@ -1945,6 +1963,8 @@ public class Prophet6SoundLibrarian {
 	private static final int SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH = 20;
 	private static final int PROPHET_6_USER_BANK_COUNT = 500;
 	private static final int SYSEX_SEND_DELAY_TIME = 150;
+	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT = 5;
+	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS = 1000;
 
 	static FileNameExtensionFilter p6libraryFilter = new FileNameExtensionFilter("Prophet 6 Library Files (*.p6lib)",
 			"p6lib");
