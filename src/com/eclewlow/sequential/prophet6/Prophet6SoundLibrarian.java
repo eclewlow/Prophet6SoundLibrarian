@@ -133,6 +133,7 @@ public class Prophet6SoundLibrarian {
 				Component returnComp = super.prepareRenderer(renderer, row, column);
 				Color alternateColor = new Color(252, 242, 206);
 				Color whiteColor = Color.WHITE;
+
 				if (!returnComp.getBackground().equals(getSelectionBackground())) {
 					Color bg = (row % 2 == 0 ? alternateColor : whiteColor);
 					returnComp.setBackground(bg);
@@ -154,6 +155,7 @@ public class Prophet6SoundLibrarian {
 
 				UIManager.put("Table.dropLineColor", Color.cyan);
 				UIManager.put("Table.dropLineShortColor", Color.cyan);
+				UIManager.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
 				setDragEnabled(true);
 				setTransferHandler(new MyListDropHandler(this));
