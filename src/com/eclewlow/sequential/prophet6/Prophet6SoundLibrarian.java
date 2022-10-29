@@ -139,6 +139,9 @@ public class Prophet6SoundLibrarian {
 					returnComp.setBackground(bg);
 					bg = null;
 				}
+				
+				JComponent jcomp = (JComponent) returnComp;
+				jcomp.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
 				return returnComp;
 			};
@@ -152,10 +155,6 @@ public class Prophet6SoundLibrarian {
 				getTableHeader().setReorderingAllowed(false);
 
 				setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
-				UIManager.put("Table.dropLineColor", Color.cyan);
-				UIManager.put("Table.dropLineShortColor", Color.cyan);
-				UIManager.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
 				setDragEnabled(true);
 				setTransferHandler(new MyListDropHandler(this));
@@ -1332,6 +1331,9 @@ public class Prophet6SoundLibrarian {
 					bg = null;
 				}
 
+				JComponent jcomp = (JComponent) returnComp;
+				jcomp.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+
 				if (Prophet6SoundLibrarianMergeDragStateManager.getInstance().isDragging()) {
 					if (mode == MERGE_TABLE_MODE_DESTINATION) {
 						int selectedRow = getSelectedRow();
@@ -2049,6 +2051,10 @@ public class Prophet6SoundLibrarian {
 				try {
 					// set the look and feel
 					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+					UIManager.put("Table.dropLineColor", Color.cyan);
+					UIManager.put("Table.dropLineShortColor", Color.cyan);
+					UIManager.put("Table.focusCellHighlightBorder", BorderFactory.createEmptyBorder(1, 1, 1, 1));
+
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
