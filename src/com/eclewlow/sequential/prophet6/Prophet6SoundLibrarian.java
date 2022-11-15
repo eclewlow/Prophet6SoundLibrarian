@@ -30,6 +30,8 @@ import java.awt.event.FocusEvent.Cause;
 
 public class Prophet6SoundLibrarian {
 
+	public static final String APP_VERSION = "1.1.11";
+
 	public Prophet6SoundLibrarianMainFrame mainFrame;
 	public Prophet6SoundLibrarianMergeFrame mergeFrame;
 
@@ -1896,10 +1898,8 @@ public class Prophet6SoundLibrarian {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					JOptionPane.showOptionDialog(mainFrame,
-							"Prophet 6 Sound Librarian\nVersion 1.1.11\n\nEclipse Public License - v 2.0",
-							"About Prophet6SoundLibrarian", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null,
-							new Object[] {}, null);
+					Prophet6SoundLibrarianAboutDialog dialog = new Prophet6SoundLibrarianAboutDialog();
+					dialog.setVisible(true);
 				}
 			});
 			helpMenu.add(aboutItem);
@@ -1972,6 +1972,35 @@ public class Prophet6SoundLibrarian {
 
 			add(helpMenu);
 
+		}
+	}
+
+	public class Prophet6SoundLibrarianAboutDialog extends JDialog {
+		private static final long serialVersionUID = 1L;
+
+		public Prophet6SoundLibrarianAboutDialog() {
+			super(mainFrame, "About Prophet 6 Sound Librarian", true);
+
+			ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+
+			JLabel sequentialLabel = new JLabel(sequentialIcon);
+
+			add(BorderLayout.CENTER, sequentialLabel);
+
+			JPanel southPanel = new JPanel(new BorderLayout());
+
+			southPanel.add(BorderLayout.EAST, new JLabel("Prophet 6 Sound Librarian Version: " + APP_VERSION));
+			southPanel.add(BorderLayout.WEST, new JLabel("Eclipse Public License - v 2.0"));
+
+			add(BorderLayout.SOUTH, southPanel);
+
+			setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
+			setLocationRelativeTo(mainFrame);
+
+			JPanel dp = (JPanel) getContentPane();
+			dp.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+			setSize(600, 200);
+			setResizable(false);
 		}
 	}
 
