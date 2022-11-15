@@ -1,7 +1,7 @@
 # Prophet6SoundLibrarian
 Prophet 6 Sound Librarian software for organizing Sequential Circuits Prophet 6 patches.
 
-[![License](https://img.shields.io/badge/License-Eclipse%20Public%20License%202.0-blue.svg)](#license)
+[![License](https://img.shields.io/badge/License-Eclipse%20Public%20License%202.0-blue.svg)](https://www.eclipse.org/legal/epl-2.0/)
 
 Prophet6SoundLibrarian would not be possible without the Mac Java MIDI SysEx implementation that Derek Cook has so arduously developed.  The library can be found here https://github.com/DerekCook/CoreMidi4J.  CoreMidi4J is provided similarly under the Eclipse Public License 1.0.
 
