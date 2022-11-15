@@ -139,7 +139,7 @@ public class Prophet6SoundLibrarian {
 					returnComp.setBackground(bg);
 					bg = null;
 				}
-				
+
 				JComponent jcomp = (JComponent) returnComp;
 				jcomp.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
@@ -1433,7 +1433,7 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemMergeSysex;
 
 		public Prophet6SoundLibrarianMenuBar() {
-			JMenu menu = new JMenu("File");
+			JMenu fileMenu = new JMenu("File");
 
 			menuItemNewLibrary = new JMenuItem("New Library");
 			menuItemNewLibrary.addActionListener(new ActionListener() {
@@ -1457,7 +1457,7 @@ public class Prophet6SoundLibrarian {
 			});
 			menuItemNewLibrary.setAccelerator(KeyStroke.getKeyStroke("meta N"));
 
-			menu.add(menuItemNewLibrary);
+			fileMenu.add(menuItemNewLibrary);
 
 			menuItemLoadLibrary = new JMenuItem("Load Library...");
 			menuItemLoadLibrary.addActionListener(new ActionListener() {
@@ -1527,7 +1527,7 @@ public class Prophet6SoundLibrarian {
 			});
 			menuItemLoadLibrary.setAccelerator(KeyStroke.getKeyStroke("meta O"));
 
-			menu.add(menuItemLoadLibrary);
+			fileMenu.add(menuItemLoadLibrary);
 
 			menuItemSaveLibrary = new JMenuItem("Save Library...");
 			menuItemSaveLibrary.addActionListener(new ActionListener() {
@@ -1583,7 +1583,7 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 			menuItemSaveLibrary.setAccelerator(KeyStroke.getKeyStroke("meta S"));
-			menu.add(menuItemSaveLibrary);
+			fileMenu.add(menuItemSaveLibrary);
 
 			menuItemMergeLibrary = new JMenuItem("Merge Library...");
 			menuItemMergeLibrary.addActionListener(new ActionListener() {
@@ -1652,9 +1652,9 @@ public class Prophet6SoundLibrarian {
 
 				}
 			});
-			menu.add(menuItemMergeLibrary);
+			fileMenu.add(menuItemMergeLibrary);
 
-			menu.addSeparator();
+			fileMenu.addSeparator();
 
 			menuItemLoadProgram = new JMenuItem("Load Program...");
 			menuItemLoadProgram.addActionListener(new ActionListener() {
@@ -1731,7 +1731,7 @@ public class Prophet6SoundLibrarian {
 			});
 			menuItemLoadProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt O"));
 
-			menu.add(menuItemLoadProgram);
+			fileMenu.add(menuItemLoadProgram);
 
 			menuItemSaveProgram = new JMenuItem("Save Program...");
 			menuItemSaveProgram.addActionListener(new ActionListener() {
@@ -1812,9 +1812,9 @@ public class Prophet6SoundLibrarian {
 				}
 			});
 			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
-			menu.add(menuItemSaveProgram);
+			fileMenu.add(menuItemSaveProgram);
 
-			menu.addSeparator();
+			fileMenu.addSeparator();
 
 			menuItemMergeSysex = new JMenuItem("Merge Sysex...");
 			menuItemMergeSysex.addActionListener(new ActionListener() {
@@ -1882,12 +1882,29 @@ public class Prophet6SoundLibrarian {
 
 				}
 			});
-			menu.add(menuItemMergeSysex);
+			fileMenu.add(menuItemMergeSysex);
 
 			menuItemLoadProgram.setEnabled(false);
 			menuItemSaveProgram.setEnabled(false);
 
-			add(menu);
+			add(fileMenu);
+
+			JMenu helpMenu = new JMenu("Help");
+
+			JMenuItem aboutItem = new JMenuItem("About");
+			aboutItem.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					JOptionPane.showOptionDialog(mainFrame,
+							"Prophet 6 Sound Librarian\nVersion 1.1.11\n\nEclipse Public License - v 2.0",
+							"About Prophet6SoundLibrarian", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null,
+							new Object[] {}, null);
+				}
+			});
+			helpMenu.add(aboutItem);
+
+			add(helpMenu);
 
 		}
 	}
@@ -1903,49 +1920,58 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemMergeSysex;
 
 		public Prophet6SoundLibrarianDummyMenuBar() {
-			JMenu menu = new JMenu("File");
+			JMenu fileMenu = new JMenu("File");
 
 			menuItemNewLibrary = new JMenuItem("New Library");
 			menuItemNewLibrary.setEnabled(false);
 			menuItemNewLibrary.setAccelerator(KeyStroke.getKeyStroke("meta N"));
 
-			menu.add(menuItemNewLibrary);
+			fileMenu.add(menuItemNewLibrary);
 
 			menuItemLoadLibrary = new JMenuItem("Load Library...");
 			menuItemLoadLibrary.setEnabled(false);
 			menuItemLoadLibrary.setAccelerator(KeyStroke.getKeyStroke("meta O"));
 
-			menu.add(menuItemLoadLibrary);
+			fileMenu.add(menuItemLoadLibrary);
 
 			menuItemSaveLibrary = new JMenuItem("Save Library...");
 			menuItemSaveLibrary.setEnabled(false);
 			menuItemSaveLibrary.setAccelerator(KeyStroke.getKeyStroke("meta S"));
-			menu.add(menuItemSaveLibrary);
+			fileMenu.add(menuItemSaveLibrary);
 
 			menuItemMergeLibrary = new JMenuItem("Merge Library...");
 			menuItemMergeLibrary.setEnabled(false);
-			menu.add(menuItemMergeLibrary);
+			fileMenu.add(menuItemMergeLibrary);
 
-			menu.addSeparator();
+			fileMenu.addSeparator();
 
 			menuItemLoadProgram = new JMenuItem("Load Program...");
 			menuItemLoadProgram.setEnabled(false);
 			menuItemLoadProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt O"));
 
-			menu.add(menuItemLoadProgram);
+			fileMenu.add(menuItemLoadProgram);
 
 			menuItemSaveProgram = new JMenuItem("Save Program...");
 			menuItemSaveProgram.setEnabled(false);
 			menuItemSaveProgram.setAccelerator(KeyStroke.getKeyStroke("meta alt S"));
-			menu.add(menuItemSaveProgram);
+			fileMenu.add(menuItemSaveProgram);
 
-			menu.addSeparator();
+			fileMenu.addSeparator();
 
 			menuItemMergeSysex = new JMenuItem("Merge Sysex...");
 			menuItemMergeSysex.setEnabled(false);
-			menu.add(menuItemMergeSysex);
+			fileMenu.add(menuItemMergeSysex);
 
-			add(menu);
+			add(fileMenu);
+
+			JMenu helpMenu = new JMenu("Help");
+
+			JMenuItem aboutItem = new JMenuItem("About");
+			aboutItem.setEnabled(false);
+			helpMenu.add(aboutItem);
+
+			add(helpMenu);
+
 		}
 	}
 
