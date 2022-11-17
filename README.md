@@ -29,7 +29,7 @@ from the
 
 On opening the Prophet6SoundLibrarian JAR file, the main window should appear as below.
 
-![image](https://user-images.githubusercontent.com/32854625/198147628-725aacfe-9983-4270-b493-f50a1cae4c30.png)
+![image](https://user-images.githubusercontent.com/32854625/202584333-08a25218-04a4-4299-96dc-49829984001a.png)
 
 The Prophet6SoundLibrarian allows for transferring user bank/programs to and from the Prophet 6 synthesizer.  Currently supported files for merge are .syx and .p6lib (a Prophet6SoundLibrarian format file) files.
 It also allows for reordering single patches or group-selected patches, renaming patches, saving an entire 500-user-patch library (`*.p6lib` file), saving single or multiple-selected programs (`*.p6program` file), and loading both `p6lib` and `p6program` files.  It also allows for merging a .p6lib library or Prophet 6 .syx file into the current working library. 
@@ -71,6 +71,6 @@ Also, the buttons in the TRANSFER area will change from disabled to enabled.
 
 ### Print Dialog
 
-- A File->Print... option was added in v1.1.12.  The dialog may also have an export to PDF option.  The result is shown below (displaying page 1 only).  Known issue: on Mac, the "Open in Preview" button functionality is broken as per the following ticket. (https://bugs.openjdk.org/browse/JDK-8276027).
+- A File->Print... option was added in v1.1.12.  The dialog may also have an export to PDF option.  The result is shown below.  Known issue: on Mac, the "Open in Preview" button functionality is broken as per the following ticket.  Clicking on "Open in Preview" will send the job to the printer. (https://bugs.openjdk.org/browse/JDK-8276027).
 
-![image](https://user-images.githubusercontent.com/32854625/202334612-44b51acd-f25d-439f-945c-fd9059321d69.png)
+![image](https://user-images.githubusercontent.com/32854625/202584350-eed595fb-7e9d-4725-a08f-3efbae89c3a8.png)
