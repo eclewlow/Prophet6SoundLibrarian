@@ -37,7 +37,7 @@ import java.awt.font.LineMetrics;
 
 public class Prophet6SoundLibrarian {
 
-	public static final String APP_VERSION = "1.1.11";
+	public static final String APP_VERSION = "1.1.12";
 
 	public Prophet6SoundLibrarianMainFrame mainFrame;
 	public Prophet6SoundLibrarianMergeFrame mergeFrame;
