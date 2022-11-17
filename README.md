@@ -67,3 +67,10 @@ Also, the buttons in the TRANSFER area will change from disabled to enabled.
 ### AUDITION area
 
 - `Send` - send the currently selected working library patch to the Prophet 6 edit buffer.  This will allow you to play the patch on the Prophet 6 without overwriting any of the bank/programs.
+
+
+### Print Dialog
+
+- Per Version > 1.1.12, a File->Print... option is available.  The dialog may also have an export to PDF option.  The result is shown below (displaying page 1 only).  Known issue: on Mac, the "Open in Preview" button functionality is broken as per the following ticket. (https://bugs.openjdk.org/browse/JDK-8276027).
+
+![image](https://user-images.githubusercontent.com/32854625/202334612-44b51acd-f25d-439f-945c-fd9059321d69.png)
