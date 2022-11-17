@@ -1,5 +1,9 @@
 package com.eclewlow.sequential.prophet6;
 
+import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttributeSet;
+import javax.print.attribute.standard.Destination;
+import javax.print.attribute.standard.DialogTypeSelection;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
@@ -12,10 +16,13 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
+import java.awt.print.*;
+import java.awt.*;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -23,10 +30,10 @@ import java.util.List;
 import java.util.prefs.Preferences;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import java.awt.*;
 import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.awt.event.FocusEvent.Cause;
+import java.awt.font.LineMetrics;
 
 public class Prophet6SoundLibrarian {
 
@@ -1433,6 +1440,7 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemLoadProgram;
 		JMenuItem menuItemSaveProgram;
 		JMenuItem menuItemMergeSysex;
+		JMenuItem menuItemPrint;
 
 		public Prophet6SoundLibrarianMenuBar() {
 			JMenu fileMenu = new JMenu("File");
@@ -1886,6 +1894,46 @@ public class Prophet6SoundLibrarian {
 			});
 			fileMenu.add(menuItemMergeSysex);
 
+			menuItemPrint = new JMenuItem("Print...");
+			menuItemPrint.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					PrinterJob job = PrinterJob.getPrinterJob();
+
+					PrintRequestAttributeSet attributes = new HashPrintRequestAttributeSet();
+					PageFormat pageFormat = job.defaultPage();
+
+					Book book = new Book();
+
+					book.append(new Prophet6UserBankPrinter(), pageFormat, 5);
+
+					job.setPageable(book);
+
+					attributes.add(DialogTypeSelection.NATIVE);
+
+					boolean ok = job.printDialog(attributes);
+
+					if (ok && attributes.containsKey(Destination.class)) {
+						// this is a pdf save
+						try {
+							job.print();
+						} catch (PrinterException ex) {
+							ex.printStackTrace();
+						}
+					} else if (ok) {
+						try {
+							job.print();
+						} catch (PrinterException ex) {
+							ex.printStackTrace();
+						}
+					}
+				}
+			});
+			menuItemPrint.setAccelerator(KeyStroke.getKeyStroke("meta P"));
+			fileMenu.addSeparator();
+			fileMenu.add(menuItemPrint);
+
 			menuItemLoadProgram.setEnabled(false);
 			menuItemSaveProgram.setEnabled(false);
 
@@ -2001,6 +2049,127 @@ public class Prophet6SoundLibrarian {
 			dp.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 			setSize(600, 200);
 			setResizable(false);
+		}
+	}
+
+	public class Prophet6UserBankPrinter implements Printable {
+
+		public void drawString(Graphics2D g2d, String s, int x, int y) {
+			g2d.drawString(s, x, y + getStringHeight(g2d, s));
+		}
+
+		public int getStringHeight(Graphics2D g2d, String s) {
+			LineMetrics lm = g2d.getFont().getLineMetrics(s, g2d.getFontRenderContext());
+
+			return (int) lm.getAscent();
+		}
+
+		public int print(Graphics g, PageFormat pf, int page) throws PrinterException {
+
+			if (page > 4) {
+				return NO_SUCH_PAGE;
+			}
+
+			try {
+				Graphics2D g2d = (Graphics2D) g;
+
+				InputStream is = getClass().getResourceAsStream("Avenir Book.ttf");
+				Font avenirBookFont = Font.createFont(Font.TRUETYPE_FONT, is);
+
+				is = getClass().getResourceAsStream("Avenir Next Condensed Demi Bold.ttf");
+				Font avenirDemiBoldFont = Font.createFont(Font.TRUETYPE_FONT, is);
+
+				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+				List<Prophet6SysexPatch> l = model.getPatches();
+
+				if (page == 0) {
+
+					g2d.translate(1.0 * 72.0f, 0.75 * 72.0f);
+
+					int y = 0;
+
+					String presets = "SEQUENTIAL PROPHET-6 USER BANKS";
+
+					g2d.setColor(new Color(0x231f20));
+
+					g2d.setFont(avenirDemiBoldFont.deriveFont(Font.PLAIN, 18f));
+					drawString(g2d, presets, 0, y);
+					y += getStringHeight(g2d, presets);
+
+					y = (int) (2.0f * 72.0f - 0.75 * 72.0f);
+
+					g2d.setColor(Color.BLACK);
+					g2d.setFont(avenirDemiBoldFont.deriveFont(Font.PLAIN, 12f));
+
+					LineMetrics lm = g2d.getFont().getLineMetrics("000", g2d.getFontRenderContext());
+
+					drawString(g2d, "BANK " + page, 0, y);
+					y += 14f;
+
+					drawString(g2d, String.format("%03d", page * 100) + "-" + String.format("%03d", page * 100 + 99), 0,
+							y);
+
+					y += 14f;
+					y += 14f;
+
+					g2d.setFont(avenirBookFont.deriveFont(Font.PLAIN, 9f));
+
+					int yOffset = y;
+
+					lm = g2d.getFont().getLineMetrics("000", g2d.getFontRenderContext());
+
+					for (Prophet6SysexPatch patch : l) {
+						if (patch.getPatchBank() > 0)
+							break;
+						drawString(g2d, patch.getBankProgPadded(),
+								Math.floorDiv(patch.getPatchProg(), 50) * (int) (3.375 * 72.0f),
+								yOffset + (int) ((patch.getPatchProg() % 50) * (lm.getAscent() + 1 + 1.0 / 16)));
+						drawString(g2d, patch.getPatchName(),
+								Math.floorDiv(patch.getPatchProg(), 50) * (int) (3.375 * 72.0f) + (int) (0.5 * 72),
+								yOffset + (int) ((patch.getPatchProg() % 50) * (lm.getAscent() + 1 + 1.0 / 16)));
+					}
+				} else {
+					g2d.translate(1.0 * 72.0f, 1.0 * 72.0f);
+
+					int y = 0;
+
+					g2d.setColor(Color.BLACK);
+
+					g2d.setFont(avenirDemiBoldFont.deriveFont(Font.PLAIN, 12f));
+
+					LineMetrics lm = g2d.getFont().getLineMetrics("000", g2d.getFontRenderContext());
+
+					drawString(g2d, "BANK " + page, 0, 0);
+					y += 14f;
+
+					drawString(g2d, String.format("%03d", page * 100) + "-" + String.format("%03d", page * 100 + 99), 0,
+							y);
+
+					y += 14f;
+					y += 14f;
+
+					g2d.setFont(avenirBookFont.deriveFont(Font.PLAIN, 9f));
+
+					int yOffset = y;
+
+					lm = g2d.getFont().getLineMetrics("000", g2d.getFontRenderContext());
+
+					for (int i = 0; i < 100; i++) {
+						Prophet6SysexPatch patch = l.get(page * 100 + i);
+						drawString(g2d, patch.getBankProgPadded(),
+								Math.floorDiv(patch.getPatchProg(), 50) * (int) (3.375 * 72.0f),
+								yOffset + (int) ((patch.getPatchProg() % 50) * (lm.getAscent() + 1 + 1.0 / 16)));
+						drawString(g2d, patch.getPatchName(),
+								Math.floorDiv(patch.getPatchProg(), 50) * (int) (3.375 * 72.0f) + (int) (0.5 * 72),
+								yOffset + (int) ((patch.getPatchProg() % 50) * (lm.getAscent() + 1 + 1.0 / 16)));
+					}
+				}
+
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+
+			return PAGE_EXISTS;
 		}
 	}
 
