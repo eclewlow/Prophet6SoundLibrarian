@@ -1,4 +1,4 @@
-package com.eclewlow.sequential.prophet6;
+package com.eclewlow.sequential;
 
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
@@ -16,6 +16,7 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DocumentFilter;
+
 import java.awt.print.*;
 import java.awt.*;
 
@@ -23,8 +24,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.List;
 import java.util.prefs.Preferences;
@@ -35,14 +34,14 @@ import java.awt.event.*;
 import java.awt.event.FocusEvent.Cause;
 import java.awt.font.LineMetrics;
 
-public class Prophet6SoundLibrarian {
+public class SoundLibrarian {
 
 	public static final String APP_VERSION = "1.1.12";
 
-	public Prophet6SoundLibrarianMainFrame mainFrame;
-	public Prophet6SoundLibrarianMergeFrame mergeFrame;
+	public SoundLibrarianMainFrame mainFrame;
+	public SoundLibrarianMergeFrame mergeFrame;
 
-	public class Prophet6SoundLibrarianMainFrame extends JFrame {
+	public class SoundLibrarianMainFrame extends JFrame {
 		private static final long serialVersionUID = 1L;
 		JButton openButton;
 		JButton printButton;
@@ -60,7 +59,7 @@ public class Prophet6SoundLibrarian {
 		DragDropList ddl;
 		NameFieldFocusListener nffl = new NameFieldFocusListener();
 
-		public Prophet6SoundLibrarianMainFrame(String arg0) {
+		public SoundLibrarianMainFrame(String arg0) {
 			super(arg0);
 		}
 
@@ -105,19 +104,19 @@ public class Prophet6SoundLibrarian {
 					int dropTargetIndex = dl.getRow();
 
 					DragDropList dpl = (DragDropList) support.getComponent();
-					Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) dpl.getModel();
+					SysexTableItemModel dlm = (SysexTableItemModel) dpl.getModel();
 
 					int[] selectedRows = dpl.getSelectedRows();
 
-					List<Prophet6SysexPatch> patches = dlm.getPatches();
+					List<AbstractSysexPatch> patches = dlm.getPatches();
 
-					List<Prophet6SysexPatch> selectedObjects = new ArrayList<Prophet6SysexPatch>();
-					List<Prophet6SysexPatch> selectedObjectClones = new ArrayList<Prophet6SysexPatch>();
+					List<AbstractSysexPatch> selectedObjects = new ArrayList<AbstractSysexPatch>();
+					List<AbstractSysexPatch> selectedObjectClones = new ArrayList<AbstractSysexPatch>();
 
 					for (int i = 0; i < selectedRows.length; i++) {
-						Prophet6SysexPatch patch = patches.get(selectedRows[i]);
+						AbstractSysexPatch patch = patches.get(selectedRows[i]);
 						selectedObjects.add(patch);
-						selectedObjectClones.add((Prophet6SysexPatch) patch.clone());
+						selectedObjectClones.add((AbstractSysexPatch) patch.clone());
 					}
 					patches.addAll(dropTargetIndex, selectedObjectClones);
 					patches.removeAll(selectedObjects);
@@ -136,7 +135,7 @@ public class Prophet6SoundLibrarian {
 
 		public class DragDropList extends JTable implements ClipboardOwner {
 			private static final long serialVersionUID = 1L;
-			Prophet6SysexTableItemModel model;
+			SysexTableItemModel model;
 
 			public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
 				Component returnComp = super.prepareRenderer(renderer, row, column);
@@ -156,8 +155,8 @@ public class Prophet6SoundLibrarian {
 			};
 
 			public DragDropList() {
-				super(new Prophet6SysexTableItemModel());
-				model = (Prophet6SysexTableItemModel) getModel();
+				super(new SysexTableItemModel());
+				model = (SysexTableItemModel) getModel();
 
 				setDropMode(DropMode.INSERT_ROWS);
 				setFillsViewportHeight(true);
@@ -207,15 +206,15 @@ public class Prophet6SoundLibrarian {
 						if (selectedRows.length == 0)
 							return;
 
-						Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
-						List<Prophet6SysexPatch> patches = dlm.getPatches();
+						SysexTableItemModel dlm = (SysexTableItemModel) getModel();
+						List<AbstractSysexPatch> patches = dlm.getPatches();
 
 						int n = JOptionPane.showConfirmDialog(mainFrame,
 								"The selected program(s) will be initialized, continue?", "Initialize Program",
 								JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 						if (n == JOptionPane.OK_OPTION) {
 							for (int i = 0; i < selectedRows.length; i++) {
-								Prophet6SysexPatch initPatch = new Prophet6SysexPatch(
+								AbstractSysexPatch initPatch = new Prophet6SysexPatch(
 										Prophet6SysexPatch.INIT_PATCH_BYTES);
 
 								patches.set(selectedRows[i], initPatch);
@@ -236,30 +235,30 @@ public class Prophet6SoundLibrarian {
 					@Override
 					public void valueChanged(ListSelectionEvent e) {
 
-						Prophet6SoundLibrarianMenuBar menuBar = (Prophet6SoundLibrarianMenuBar) getJMenuBar();
+						SoundLibrarianMenuBar menuBar = (SoundLibrarianMenuBar) getJMenuBar();
 
 						if (!e.getValueIsAdjusting()) {
 							int[] selectedRows = getSelectedRows();
 							if (selectedRows.length > 1) {
-								Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
+								AbstractSysexPatch patch = model.getPatchAt(selectedRows[0]);
 								nameField.setCurrentIndex(selectedRows[0]);
 								nameField.setText(patch.getPatchName().replaceAll("\\s+$", ""));
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(false);
 								menuBar.menuItemSaveProgram.setEnabled(true);
-								if (Prophet6Sysex.getInstance().isConnected()) {
+								if (SysexIOManager.getInstance().isConnected()) {
 									sendButton.setEnabled(true);
 									receiveButton.setEnabled(true);
 									auditionSendButton.setEnabled(true);
 								}
 							} else if (selectedRows.length == 1) {
-								Prophet6SysexPatch patch = model.getProphet6SysexPatchAt(selectedRows[0]);
+								AbstractSysexPatch patch = model.getPatchAt(selectedRows[0]);
 								nameField.setCurrentIndex(selectedRows[0]);
 								nameField.setText(patch.getPatchName().replaceAll("\\s+$", ""));
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(true);
 								menuBar.menuItemSaveProgram.setEnabled(true);
-								if (Prophet6Sysex.getInstance().isConnected()) {
+								if (SysexIOManager.getInstance().isConnected()) {
 									sendButton.setEnabled(true);
 									receiveButton.setEnabled(true);
 									auditionSendButton.setEnabled(true);
@@ -288,12 +287,11 @@ public class Prophet6SoundLibrarian {
 
 						Clipboard c = Toolkit.getDefaultToolkit().getSystemClipboard();
 
-						Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
-						List<Prophet6SysexPatch> patches = dlm.getPatches();
+						SysexTableItemModel dlm = (SysexTableItemModel) getModel();
+						List<AbstractSysexPatch> patches = dlm.getPatches();
 						int selectedRow = getSelectedRow();
 
-						Prophet6SysexPatchSelection selection = new Prophet6SysexPatchSelection(
-								patches.get(selectedRow));
+						SysexPatchSelection selection = new SysexPatchSelection(patches.get(selectedRow));
 						c.setContents(selection, DragDropList.this);
 					}
 				});
@@ -309,15 +307,15 @@ public class Prophet6SoundLibrarian {
 						Transferable content = clipboard.getContents(DragDropList.this);
 
 						boolean hasTransferable = (content != null)
-								&& content.isDataFlavorSupported(Prophet6SysexPatchSelection.dmselFlavor);
+								&& content.isDataFlavorSupported(SysexPatchSelection.dmselFlavor);
 						if (hasTransferable) {
 							try {
-								Prophet6SysexPatch result = (Prophet6SysexPatch) content
-										.getTransferData(Prophet6SysexPatchSelection.dmselFlavor);
+								AbstractSysexPatch result = (AbstractSysexPatch) content
+										.getTransferData(SysexPatchSelection.dmselFlavor);
 
-								Prophet6SysexPatch clone = (Prophet6SysexPatch) result.clone();
-								Prophet6SysexTableItemModel dlm = (Prophet6SysexTableItemModel) getModel();
-								List<Prophet6SysexPatch> patches = dlm.getPatches();
+								AbstractSysexPatch clone = (AbstractSysexPatch) result.clone();
+								SysexTableItemModel dlm = (SysexTableItemModel) getModel();
+								List<AbstractSysexPatch> patches = dlm.getPatches();
 								int selectedRow = getSelectedRow();
 								patches.set(selectedRow, clone);
 								dlm.fireTableDataChanged();
@@ -363,8 +361,8 @@ public class Prophet6SoundLibrarian {
 			public void focusLost(FocusEvent e) {
 				if (e.getCause() == Cause.TRAVERSAL_FORWARD || e.getCause() == Cause.TRAVERSAL_BACKWARD) {
 					if (nameField.getCurrentIndex() != -1) {
-						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-						List<Prophet6SysexPatch> l = model.getPatches();
+						SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+						List<AbstractSysexPatch> l = model.getPatches();
 						int[] selectedRows = ddl.getSelectedRows();
 
 						l.get(nameField.getCurrentIndex()).setPatchName(nameField.getText());
@@ -382,8 +380,8 @@ public class Prophet6SoundLibrarian {
 
 						int[] selectedRows = ddl.getSelectedRows();
 
-						Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-						List<Prophet6SysexPatch> l = model.getPatches();
+						SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+						List<AbstractSysexPatch> l = model.getPatches();
 
 						l.get(currentIndex).setPatchName(nameField.getText());
 						model.fireTableDataChanged();
@@ -419,8 +417,8 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 					int selectedRow = ddl.getSelectedRow();
 					int[] selectedRows = ddl.getSelectedRows();
 					l.get(selectedRow).setPatchName(((JTextField) e.getSource()).getText());
@@ -500,7 +498,7 @@ public class Prophet6SoundLibrarian {
 				sendButton.setEnabled(enabled);
 				receiveButton.setEnabled(enabled);
 				auditionSendButton.setEnabled(enabled);
-			} else if (Prophet6Sysex.getInstance().isConnected() && mainFrame.ddl.getSelectedRowCount() > 0) {
+			} else if (SysexIOManager.getInstance().isConnected() && mainFrame.ddl.getSelectedRowCount() > 0) {
 				sendButton.setEnabled(enabled);
 				receiveButton.setEnabled(enabled);
 				auditionSendButton.setEnabled(enabled);
@@ -559,7 +557,7 @@ public class Prophet6SoundLibrarian {
 
 			deviceLabel.setPreferredSize(new Dimension(CONNECTION_PREFERRED_WIDTH, CONNECTION_PREFERRED_HEIGHT));
 
-			Prophet6Sysex.getInstance().addObserver(new Observer() {
+			SysexIOManager.getInstance().addObserver(new Observer() {
 
 				@Override
 				public void update(String status, String target) {
@@ -601,12 +599,11 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 					int[] selectedRows = ddl.getSelectedRows();
 
-					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
-							selectedRows.length);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(selectedRows.length);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
@@ -616,14 +613,14 @@ public class Prophet6SoundLibrarian {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
-								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+								SysexIOManager p6sysex = SysexIOManager.getInstance();
 
 								for (int i = 0; i < selectedRows.length; i++) {
 
 									dialog.setProgressBarValue(i + 1);
 									dialog.setProgressText("Sending..." + (i + 1) + " / " + selectedRows.length);
 
-									p6sysex.send(l.get(selectedRows[i]).bytes.clone());
+									p6sysex.send(l.get(selectedRows[i]).getBytes());
 									Thread.sleep(SYSEX_SEND_DELAY_TIME);
 								}
 
@@ -654,12 +651,11 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public synchronized void actionPerformed(ActionEvent e) {
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 					int[] selectedRows = ddl.getSelectedRows();
 
-					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
-							selectedRows.length);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(selectedRows.length);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
@@ -669,7 +665,7 @@ public class Prophet6SoundLibrarian {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
-								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+								SysexIOManager p6sysex = SysexIOManager.getInstance();
 
 								synchronized (p6sysex) {
 
@@ -701,7 +697,7 @@ public class Prophet6SoundLibrarian {
 													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
 										}
 
-										Prophet6SysexPatch patch = new Prophet6SysexPatch(readBytes);
+										AbstractSysexPatch patch = new Prophet6SysexPatch(readBytes);
 
 										l.set(selectedRows[i], patch);
 									}
@@ -738,25 +734,24 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 
-					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
-							PROPHET_6_USER_BANK_COUNT);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(PROPHET_6_USER_BANK_COUNT);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
 						public void run() {
 
 							try {
-								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+								SysexIOManager p6sysex = SysexIOManager.getInstance();
 
 								for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 
 									dialog.setProgressBarValue(i + 1);
 									dialog.setProgressText("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
 
-									p6sysex.send(l.get(i).bytes.clone());
+									p6sysex.send(l.get(i).getBytes());
 
 									Thread.sleep(SYSEX_SEND_DELAY_TIME);
 								}
@@ -785,17 +780,16 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 
-					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(
-							PROPHET_6_USER_BANK_COUNT);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(PROPHET_6_USER_BANK_COUNT);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
 						public synchronized void run() {
 							try {
-								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+								SysexIOManager p6sysex = SysexIOManager.getInstance();
 
 								synchronized (p6sysex) {
 									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
@@ -827,7 +821,7 @@ public class Prophet6SoundLibrarian {
 													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
 										}
 
-										Prophet6SysexPatch patch = new Prophet6SysexPatch(readBytes);
+										AbstractSysexPatch patch = new Prophet6SysexPatch(readBytes);
 
 										l.set(i, patch);
 									}
@@ -938,11 +932,11 @@ public class Prophet6SoundLibrarian {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 					int[] selectedRows = ddl.getSelectedRows();
 
-					Prophet6SoundLibrarianProgressDialog dialog = new Prophet6SoundLibrarianProgressDialog(1);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(1);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
@@ -951,7 +945,7 @@ public class Prophet6SoundLibrarian {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
-								Prophet6Sysex p6sysex = Prophet6Sysex.getInstance();
+								SysexIOManager p6sysex = SysexIOManager.getInstance();
 
 								dialog.setProgressBarValue(1);
 								dialog.setProgressText("Sending..." + (1) + " / " + selectedRows.length);
@@ -1028,14 +1022,14 @@ public class Prophet6SoundLibrarian {
 			return panel;
 		}
 
-		public class Prophet6SoundLibrarianProgressDialog extends JDialog {
+		public class SoundLibrarianProgressDialog extends JDialog {
 			private static final long serialVersionUID = 1L;
 			private JLabel progressText;
 			JProgressBar progressBar;
 
 			private Runnable runnable;
 
-			public Prophet6SoundLibrarianProgressDialog(int max) {
+			public SoundLibrarianProgressDialog(int max) {
 				super(mainFrame, "Progress Dialog", true);
 
 				this.progressBar = new JProgressBar(0, max);
@@ -1082,13 +1076,13 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public class Prophet6SoundLibrarianMergeFrame extends JFrame {
+	public class SoundLibrarianMergeFrame extends JFrame {
 		private static final long serialVersionUID = 1L;
 
 		public MergeTable mergeIntoTable;
 		public MergeTable mergeFromTable;
 
-		public Prophet6SoundLibrarianMergeFrame(String arg0) {
+		public SoundLibrarianMergeFrame(String arg0) {
 			super(arg0);
 
 			JPanel mergePanel = new JPanel();
@@ -1135,19 +1129,19 @@ public class Prophet6SoundLibrarian {
 				public void actionPerformed(ActionEvent e) {
 					MergeTable table = (MergeTable) mergeIntoTable;
 
-					Prophet6SysexTableItemModel model;
+					SysexTableItemModel model;
 
-					model = (Prophet6SysexTableItemModel) table.getModel();
+					model = (SysexTableItemModel) table.getModel();
 
-					List<Prophet6SysexPatch> mergeSource = model.getPatches();
+					List<AbstractSysexPatch> mergeSource = model.getPatches();
 
-					model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+					model = (SysexTableItemModel) mainFrame.ddl.getModel();
 
-					List<Prophet6SysexPatch> mergeSourceClone = new ArrayList<Prophet6SysexPatch>();
+					List<AbstractSysexPatch> mergeSourceClone = new ArrayList<AbstractSysexPatch>();
 
 					try {
-						for (Prophet6SysexPatch p : mergeSource) {
-							mergeSourceClone.add((Prophet6SysexPatch) p.clone());
+						for (AbstractSysexPatch p : mergeSource) {
+							mergeSourceClone.add((AbstractSysexPatch) p.clone());
 						}
 						model.setPatches(mergeSourceClone);
 					} catch (Exception ex) {
@@ -1162,7 +1156,7 @@ public class Prophet6SoundLibrarian {
 			setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 			setContentPane(mergePanel);
 
-			Prophet6SoundLibrarianDummyMenuBar menuBar = new Prophet6SoundLibrarianDummyMenuBar();
+			SoundLibrarianDummyMenuBar menuBar = new SoundLibrarianDummyMenuBar();
 			setJMenuBar(menuBar);
 
 			addWindowListener(new WindowAdapter() {
@@ -1178,18 +1172,18 @@ public class Prophet6SoundLibrarian {
 			setVisible(true);
 
 			MergeTable table = (MergeTable) mergeIntoTable;
-			Prophet6SysexTableItemModel model;
-			model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+			SysexTableItemModel model;
+			model = (SysexTableItemModel) mainFrame.ddl.getModel();
 
-			List<Prophet6SysexPatch> mergeSource = model.getPatches();
+			List<AbstractSysexPatch> mergeSource = model.getPatches();
 
-			model = (Prophet6SysexTableItemModel) table.getModel();
+			model = (SysexTableItemModel) table.getModel();
 
-			List<Prophet6SysexPatch> mergeSourceClone = new ArrayList<Prophet6SysexPatch>();
+			List<AbstractSysexPatch> mergeSourceClone = new ArrayList<AbstractSysexPatch>();
 
 			try {
-				for (Prophet6SysexPatch p : mergeSource) {
-					mergeSourceClone.add((Prophet6SysexPatch) p.clone());
+				for (AbstractSysexPatch p : mergeSource) {
+					mergeSourceClone.add((AbstractSysexPatch) p.clone());
 				}
 				model.setPatches(mergeSourceClone);
 			} catch (Exception ex) {
@@ -1216,27 +1210,27 @@ public class Prophet6SoundLibrarian {
 				Transferable transferable;
 
 				if (table.mode == MergeTable.MERGE_TABLE_MODE_DESTINATION) {
-					transferable = new Prophet6SysexDummySelection(null);
+					transferable = new SysexDummySelection(null);
 				} else {
 
 					int[] selectedRows = table.getSelectedRows();
 
-					Prophet6SysexTableItemModel dlm = table.model;
-					List<Prophet6SysexPatch> patches = dlm.getPatches();
+					SysexTableItemModel dlm = table.model;
+					List<AbstractSysexPatch> patches = dlm.getPatches();
 
-					List<Prophet6SysexPatch> selectedObjectClones = new ArrayList<Prophet6SysexPatch>();
+					List<AbstractSysexPatch> selectedObjectClones = new ArrayList<AbstractSysexPatch>();
 
 					for (int i = 0; i < selectedRows.length; i++) {
-						Prophet6SysexPatch patch = patches.get(selectedRows[i]);
+						AbstractSysexPatch patch = patches.get(selectedRows[i]);
 
 						try {
-							selectedObjectClones.add((Prophet6SysexPatch) patch.clone());
+							selectedObjectClones.add((AbstractSysexPatch) patch.clone());
 						} catch (Exception e) {
 							e.printStackTrace();
 						}
 					}
 
-					transferable = new Prophet6SysexPatchMultiSelection(selectedObjectClones);
+					transferable = new SysexPatchMultiSelection(selectedObjectClones);
 				}
 				return transferable;
 			}
@@ -1247,7 +1241,7 @@ public class Prophet6SoundLibrarian {
 
 			public boolean canImport(TransferHandler.TransferSupport support) {
 
-				if (!support.isDataFlavorSupported(Prophet6SysexPatchMultiSelection.multiPatchFlavor)) {
+				if (!support.isDataFlavorSupported(SysexPatchMultiSelection.multiPatchFlavor)) {
 					return false;
 				}
 
@@ -1264,7 +1258,7 @@ public class Prophet6SoundLibrarian {
 			}
 
 			public boolean canImport(JComponent comp, Transferable t) {
-				if (!t.isDataFlavorSupported(Prophet6SysexPatchMultiSelection.multiPatchFlavor)) {
+				if (!t.isDataFlavorSupported(SysexPatchMultiSelection.multiPatchFlavor)) {
 					return false;
 				}
 
@@ -1280,25 +1274,25 @@ public class Prophet6SoundLibrarian {
 					return false;
 				}
 
-				Prophet6SoundLibrarianMergeDragStateManager.getInstance().setDragging(false);
+				SoundLibrarianMergeDragStateManager.getInstance().setDragging(false);
 
 				try {
-					List<Prophet6SysexPatch> patches = (List<Prophet6SysexPatch>) support.getTransferable()
-							.getTransferData(Prophet6SysexPatchMultiSelection.multiPatchFlavor);
+					List<AbstractSysexPatch> patches = (List<AbstractSysexPatch>) support.getTransferable()
+							.getTransferData(SysexPatchMultiSelection.multiPatchFlavor);
 
 					JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
 					int dropTargetIndex = dl.getRow();
 
 					MergeTable table = (MergeTable) support.getComponent();
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) table.getModel();
+					SysexTableItemModel model = (SysexTableItemModel) table.getModel();
 
-					List<Prophet6SysexPatch> mergeDestination = model.getPatches();
+					List<AbstractSysexPatch> mergeDestination = model.getPatches();
 
 					int i = dropTargetIndex;
-					for (Prophet6SysexPatch p : patches) {
+					for (AbstractSysexPatch p : patches) {
 						if (i >= mergeDestination.size() || i < 0)
 							break;
-						mergeDestination.set(i++, (Prophet6SysexPatch) p.clone());
+						mergeDestination.set(i++, (AbstractSysexPatch) p.clone());
 					}
 
 					model.fireTableDataChanged();
@@ -1317,7 +1311,7 @@ public class Prophet6SoundLibrarian {
 
 		public class MergeTable extends JTable {
 			private static final long serialVersionUID = 1L;
-			Prophet6SysexTableItemModel model;
+			SysexTableItemModel model;
 			public static final int MERGE_TABLE_MODE_SOURCE = 0;
 			public static final int MERGE_TABLE_MODE_DESTINATION = 1;
 			public int mode;
@@ -1343,7 +1337,7 @@ public class Prophet6SoundLibrarian {
 				JComponent jcomp = (JComponent) returnComp;
 				jcomp.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
-				if (Prophet6SoundLibrarianMergeDragStateManager.getInstance().isDragging()) {
+				if (SoundLibrarianMergeDragStateManager.getInstance().isDragging()) {
 					if (mode == MERGE_TABLE_MODE_DESTINATION) {
 						int selectedRow = getSelectedRow();
 
@@ -1360,8 +1354,8 @@ public class Prophet6SoundLibrarian {
 			};
 
 			public MergeTable(int mode) {
-				super(new Prophet6SysexTableItemModel());
-				model = (Prophet6SysexTableItemModel) getModel();
+				super(new SysexTableItemModel());
+				model = (SysexTableItemModel) getModel();
 
 				this.mode = mode;
 
@@ -1382,13 +1376,13 @@ public class Prophet6SoundLibrarian {
 
 					@Override
 					public void mouseMoved(MouseEvent e) {
-						Prophet6SoundLibrarianMergeDragStateManager.getInstance().setDragging(false);
+						SoundLibrarianMergeDragStateManager.getInstance().setDragging(false);
 					}
 
 					@Override
 					public void mouseDragged(MouseEvent e) {
 						if (mode == MergeTable.MERGE_TABLE_MODE_SOURCE)
-							Prophet6SoundLibrarianMergeDragStateManager.getInstance().setDragging(true);
+							SoundLibrarianMergeDragStateManager.getInstance().setDragging(true);
 					}
 				});
 
@@ -1431,7 +1425,7 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public class Prophet6SoundLibrarianMenuBar extends JMenuBar {
+	public class SoundLibrarianMenuBar extends JMenuBar {
 		private static final long serialVersionUID = 1L;
 		JMenuItem menuItemNewLibrary;
 		JMenuItem menuItemLoadLibrary;
@@ -1442,7 +1436,7 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemMergeSysex;
 		JMenuItem menuItemPrint;
 
-		public Prophet6SoundLibrarianMenuBar() {
+		public SoundLibrarianMenuBar() {
 			JMenu fileMenu = new JMenu("File");
 
 			menuItemNewLibrary = new JMenuItem("New Library");
@@ -1450,12 +1444,12 @@ public class Prophet6SoundLibrarian {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					List<Prophet6SysexPatch> newList = new ArrayList<>();
+					List<AbstractSysexPatch> newList = new ArrayList<>();
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+					SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
 
 					for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-						Prophet6SysexPatch patch = new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES);
+						AbstractSysexPatch patch = new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES);
 
 						newList.add(patch);
 					}
@@ -1505,19 +1499,28 @@ public class Prophet6SoundLibrarian {
 
 							fis.close();
 
-							Prophet6SoundLibrarianFileValidator.validateP6Library(buf);
+							SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
 
-							List<Prophet6SysexPatch> newList = new ArrayList<>();
+							SysexPatchValidator validator = new SysexPatchValidator();
 
-							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
+							Class<?> c = validator.getPatchClass(buf);
 
-							for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-								byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
-										(i + 1) * PROPHET_6_SYSEX_LENGTH);
-								Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
+							if (c != SoundLibrarian.this.sysexPatchClass) {
+								throw new Exception("Invalid file data");
+							}
 
+							SysexPatchIterator iterator = new SysexPatchIterator(buf);
+
+							List<AbstractSysexPatch> newList = new ArrayList<>();
+
+							while (iterator.hasNext()) {
+								byte[] patchBytes = (byte[]) iterator.next();
+								AbstractSysexPatch patch;
+								patch = SysexPatchFactory.getClosestPatchType(patchBytes,
+										SoundLibrarian.this.sysexPatchClass);
 								newList.add(patch);
 							}
+
 							model.setPatches(newList);
 							model.fireTableDataChanged();
 							mainFrame.ddl.addRowSelectionInterval(0, 0);
@@ -1572,11 +1575,11 @@ public class Prophet6SoundLibrarian {
 								file = new File(file + ".p6lib");
 							}
 							FileOutputStream fos = new FileOutputStream(file);
-							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
-							List<Prophet6SysexPatch> l = model.getPatches();
+							SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
+							List<AbstractSysexPatch> l = model.getPatches();
 
-							for (Prophet6SysexPatch patch : l) {
-								fos.write(patch.bytes);
+							for (AbstractSysexPatch patch : l) {
+								fos.write(patch.getBytes());
 							}
 							fos.close();
 
@@ -1631,20 +1634,27 @@ public class Prophet6SoundLibrarian {
 
 							fis.close();
 
-							Prophet6SoundLibrarianFileValidator.validateP6Library(buf);
+							SysexPatchValidator validator = new SysexPatchValidator();
 
-							List<Prophet6SysexPatch> newList = new ArrayList<>();
+							Class<?> c = validator.getPatchClass(buf);
 
-							for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-								byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
-										(i + 1) * PROPHET_6_SYSEX_LENGTH);
-								Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
+							if (c != SoundLibrarian.this.sysexPatchClass) {
+								throw new Exception("Invalid file data");
+							}
 
+							SysexPatchIterator iterator = new SysexPatchIterator(buf);
+
+							List<AbstractSysexPatch> newList = new ArrayList<>();
+
+							while (iterator.hasNext()) {
+								byte[] patchBytes = (byte[]) iterator.next();
+								AbstractSysexPatch patch;
+								patch = SysexPatchFactory.getClosestPatchType(patchBytes,
+										SoundLibrarian.this.sysexPatchClass);
 								newList.add(patch);
 							}
 
-							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mergeFrame.mergeFromTable
-									.getModel();
+							SysexTableItemModel model = (SysexTableItemModel) mergeFrame.mergeFromTable.getModel();
 							model.setPatches(newList);
 
 							mergeFrame.open();
@@ -1696,8 +1706,8 @@ public class Prophet6SoundLibrarian {
 						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
 
 						try {
-							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
-							List<Prophet6SysexPatch> l = model.getPatches();
+							SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
+							List<AbstractSysexPatch> l = model.getPatches();
 							int selectedRow = mainFrame.ddl.getSelectedRow();
 
 							int i = selectedRow;
@@ -1711,14 +1721,20 @@ public class Prophet6SoundLibrarian {
 
 								byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
 								fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
+								fis.close();
 
-								Prophet6SoundLibrarianFileValidator.validateP6Program(buf);
+								SysexPatchValidator validator = new SysexPatchValidator();
 
-								Prophet6SysexPatch patch = new Prophet6SysexPatch(buf);
+								Class<?> c = validator.getPatchClass(buf);
+
+								if (c != SoundLibrarian.this.sysexPatchClass) {
+									throw new Exception("Invalid file data");
+								}
+
+								AbstractSysexPatch patch = SysexPatchFactory.getClosestPatchType(buf,
+										SoundLibrarian.this.sysexPatchClass);
 
 								l.set(i++, patch);
-
-								fis.close();
 
 							}
 
@@ -1753,8 +1769,8 @@ public class Prophet6SoundLibrarian {
 
 					String mostRecentDirectory = prefs.get(PREFS_MOST_RECENT_DIRECTORY, null);
 
-					Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
-					List<Prophet6SysexPatch> l = model.getPatches();
+					SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
+					List<AbstractSysexPatch> l = model.getPatches();
 
 					int selectedRow = mainFrame.ddl.getSelectedRow();
 					int[] selectedRows = mainFrame.ddl.getSelectedRows();
@@ -1790,7 +1806,7 @@ public class Prophet6SoundLibrarian {
 
 										File oneFile = new File(file, l.get(selectedRows[i]).toString() + ".p6program");
 										FileOutputStream fos = new FileOutputStream(oneFile);
-										fos.write(l.get(selectedRows[i]).bytes);
+										fos.write(l.get(selectedRows[i]).getBytes());
 										fos.close();
 									}
 								} else {
@@ -1802,7 +1818,7 @@ public class Prophet6SoundLibrarian {
 								}
 
 								FileOutputStream fos = new FileOutputStream(file);
-								fos.write(l.get(selectedRow).bytes);
+								fos.write(l.get(selectedRow).getBytes());
 								fos.close();
 							}
 
@@ -1861,20 +1877,27 @@ public class Prophet6SoundLibrarian {
 
 							fis.close();
 
-							Prophet6SoundLibrarianFileValidator.validateP6SysEx(buf);
+							SysexPatchValidator validator = new SysexPatchValidator();
 
-							List<Prophet6SysexPatch> newList = new ArrayList<>();
+							Class<?> c = validator.getPatchClass(buf);
 
-							for (int i = 0; i < buf.length / PROPHET_6_SYSEX_LENGTH; i++) {
-								byte[] patchBytes = Arrays.copyOfRange(buf, i * PROPHET_6_SYSEX_LENGTH,
-										(i + 1) * PROPHET_6_SYSEX_LENGTH);
-								Prophet6SysexPatch patch = new Prophet6SysexPatch(patchBytes);
+							if (c != SoundLibrarian.this.sysexPatchClass) {
+								throw new Exception("Invalid file data");
+							}
 
+							SysexPatchIterator iterator = new SysexPatchIterator(buf);
+
+							List<AbstractSysexPatch> newList = new ArrayList<>();
+
+							while (iterator.hasNext()) {
+								byte[] patchBytes = (byte[]) iterator.next();
+								AbstractSysexPatch patch;
+								patch = SysexPatchFactory.getClosestPatchType(patchBytes,
+										SoundLibrarian.this.sysexPatchClass);
 								newList.add(patch);
 							}
 
-							Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mergeFrame.mergeFromTable
-									.getModel();
+							SysexTableItemModel model = (SysexTableItemModel) mergeFrame.mergeFromTable.getModel();
 							model.setPatches(newList);
 
 							mergeFrame.open();
@@ -1946,7 +1969,7 @@ public class Prophet6SoundLibrarian {
 
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					Prophet6SoundLibrarianAboutDialog dialog = new Prophet6SoundLibrarianAboutDialog();
+					SoundLibrarianAboutDialog dialog = new SoundLibrarianAboutDialog();
 					dialog.setVisible(true);
 				}
 			});
@@ -1957,7 +1980,7 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public class Prophet6SoundLibrarianDummyMenuBar extends JMenuBar {
+	public class SoundLibrarianDummyMenuBar extends JMenuBar {
 		private static final long serialVersionUID = 1L;
 		JMenuItem menuItemNewLibrary;
 		JMenuItem menuItemLoadLibrary;
@@ -1967,7 +1990,7 @@ public class Prophet6SoundLibrarian {
 		JMenuItem menuItemSaveProgram;
 		JMenuItem menuItemMergeSysex;
 
-		public Prophet6SoundLibrarianDummyMenuBar() {
+		public SoundLibrarianDummyMenuBar() {
 			JMenu fileMenu = new JMenu("File");
 
 			menuItemNewLibrary = new JMenuItem("New Library");
@@ -2023,10 +2046,10 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public class Prophet6SoundLibrarianAboutDialog extends JDialog {
+	public class SoundLibrarianAboutDialog extends JDialog {
 		private static final long serialVersionUID = 1L;
 
-		public Prophet6SoundLibrarianAboutDialog() {
+		public SoundLibrarianAboutDialog() {
 			super(mainFrame, "About Prophet 6 Sound Librarian", true);
 
 			ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
@@ -2079,8 +2102,8 @@ public class Prophet6SoundLibrarian {
 				is = getClass().getResourceAsStream("Avenir Next Condensed Demi Bold.ttf");
 				Font avenirDemiBoldFont = Font.createFont(Font.TRUETYPE_FONT, is);
 
-				Prophet6SysexTableItemModel model = (Prophet6SysexTableItemModel) mainFrame.ddl.getModel();
-				List<Prophet6SysexPatch> l = model.getPatches();
+				SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
+				List<AbstractSysexPatch> l = model.getPatches();
 
 				if (page == 0) {
 
@@ -2118,10 +2141,10 @@ public class Prophet6SoundLibrarian {
 
 					lm = g2d.getFont().getLineMetrics("000", g2d.getFontRenderContext());
 
-					for (Prophet6SysexPatch patch : l) {
+					for (AbstractSysexPatch patch : l) {
 						if (patch.getPatchBank() > 0)
 							break;
-						drawString(g2d, patch.getBankProgPadded(),
+						drawString(g2d, patch.getBankProgPretty(),
 								Math.floorDiv(patch.getPatchProg(), 50) * (int) (3.375 * 72.0f),
 								yOffset + (int) ((patch.getPatchProg() % 50) * (lm.getAscent() + 1 + 1.0 / 16)));
 						drawString(g2d, patch.getPatchName(),
@@ -2155,8 +2178,8 @@ public class Prophet6SoundLibrarian {
 					lm = g2d.getFont().getLineMetrics("000", g2d.getFontRenderContext());
 
 					for (int i = 0; i < 100; i++) {
-						Prophet6SysexPatch patch = l.get(page * 100 + i);
-						drawString(g2d, patch.getBankProgPadded(),
+						AbstractSysexPatch patch = l.get(page * 100 + i);
+						drawString(g2d, patch.getBankProgPretty(),
 								Math.floorDiv(patch.getPatchProg(), 50) * (int) (3.375 * 72.0f),
 								yOffset + (int) ((patch.getPatchProg() % 50) * (lm.getAscent() + 1 + 1.0 / 16)));
 						drawString(g2d, patch.getPatchName(),
@@ -2177,17 +2200,7 @@ public class Prophet6SoundLibrarian {
 			(byte) 0b11110111 };
 
 	private static final String PREFS_MOST_RECENT_DIRECTORY = "directory";
-	private static final int SYSEX_BYTE_OFFSET_PATCH_BANK = 4;
-	private static final int SYSEX_BYTE_OFFSET_PATCH_PROG = 5;
-	private static final int SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA = 6;
 	private static final int PROPHET_6_SYSEX_LENGTH = 1178;
-	private static final int PROPHET_6_EDIT_BUFFER_LENGTH = 1176;
-	private static final int SYSEX_EDIT_BUFFER_BYTE_OFFSET_PACKED_MIDI_DATA = 4;
-	private static final int SYSEX_PACKED_MIDI_DATA_LENGTH = 1171;
-	private static final int SYSEX_PACKED_MIDI_LAST_PACKET_LENGTH = 3;
-	private static final int SYSEX_UNPACKED_MIDI_DATA_LENGTH = 1024;
-	private static final int SYSEX_UNPACKED_MIDI_LAST_PACKET_LENGTH = 2;
-	private static final int SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_OFFSET = 107;
 	private static final int SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH = 20;
 	private static final int PROPHET_6_USER_BANK_COUNT = 500;
 	private static final int SYSEX_SEND_DELAY_TIME = 150;
@@ -2200,14 +2213,10 @@ public class Prophet6SoundLibrarian {
 			"Prophet 6 Program Files (*.p6program)", "p6program");
 	static FileNameExtensionFilter p6sysexFilter = new FileNameExtensionFilter("Prophet 6 SysEx Files (*.syx)", "syx");
 
-	public Prophet6SoundLibrarian() {
-		super();
-	}
-
 	private void createAndShowGUI() {
 
-		Prophet6SoundLibrarianMainFrame mainFrame = new Prophet6SoundLibrarianMainFrame("Prophet 6 Sound Librarian");
-		Prophet6SoundLibrarianMergeFrame mergeFrame = new Prophet6SoundLibrarianMergeFrame("Merge");
+		SoundLibrarianMainFrame mainFrame = new SoundLibrarianMainFrame("Prophet 6 Sound Librarian");
+		SoundLibrarianMergeFrame mergeFrame = new SoundLibrarianMergeFrame("Merge");
 
 		JPanel mainPanel = new JPanel();
 		mainPanel.setOpaque(true);
@@ -2252,7 +2261,7 @@ public class Prophet6SoundLibrarian {
 		mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		mainFrame.setContentPane(mainPanel);
 
-		mainFrame.setJMenuBar(new Prophet6SoundLibrarianMenuBar());
+		mainFrame.setJMenuBar(new SoundLibrarianMenuBar());
 
 		mainFrame.pack();
 
@@ -2262,9 +2271,12 @@ public class Prophet6SoundLibrarian {
 		this.mergeFrame = mergeFrame;
 	}
 
-	public static void main(String args[]) {
+	public Class<?> sysexPatchClass;
 
-		Prophet6SoundLibrarian p6librarian = new Prophet6SoundLibrarian();
+	public SoundLibrarian(Class<?> sysexPatchClass) {
+		super();
+
+		this.sysexPatchClass = sysexPatchClass;
 
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
@@ -2285,43 +2297,28 @@ public class Prophet6SoundLibrarian {
 
 				// Turn off metal's use of bold fonts
 				UIManager.put("swing.boldMetal", Boolean.FALSE);
-				p6librarian.createAndShowGUI();
+				createAndShowGUI();
 				try {
-					Prophet6Sysex.getInstance().rescanDevices();
+					SysexIOManager.getInstance().rescanDevices();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 		});
-
 	}
 
-	public static String byteArrayToHex(byte[] a) {
-		StringBuilder sb = new StringBuilder(a.length * 2);
-		for (byte b : a)
-			sb.append(String.format("%02x", b));
-		return sb.toString();
-	}
-
-	public static String byteArrayToHex2(byte[] a) {
-		StringBuilder sb = new StringBuilder(a.length * 2);
-		for (byte b : a)
-			sb.append(String.format("(byte)0x%02x,", b));
-		return sb.toString();
-	}
-
-	public static class Prophet6SoundLibrarianMergeDragStateManager {
-		private static Prophet6SoundLibrarianMergeDragStateManager instance = null;
+	public static class SoundLibrarianMergeDragStateManager {
+		private static SoundLibrarianMergeDragStateManager instance = null;
 		private boolean isDragging = false;
 
-		private Prophet6SoundLibrarianMergeDragStateManager() {
+		private SoundLibrarianMergeDragStateManager() {
 			super();
 
 		}
 
-		public static Prophet6SoundLibrarianMergeDragStateManager getInstance() {
+		public static SoundLibrarianMergeDragStateManager getInstance() {
 			if (instance == null)
-				instance = new Prophet6SoundLibrarianMergeDragStateManager();
+				instance = new SoundLibrarianMergeDragStateManager();
 
 			return instance;
 		}
@@ -2335,396 +2332,12 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public static class Prophet6SoundLibrarianFileValidator {
-
-		public static void validateP6SysEx(byte[] bytes) throws Exception {
-			if (bytes.length % PROPHET_6_SYSEX_LENGTH != 0)
-				throw new Exception("Invalid Prophet 6 Sysex File:  Invalid Byte Length");
-			for (int i = 0; i < bytes.length / PROPHET_6_SYSEX_LENGTH; i++) {
-				byte[] slice = Arrays.copyOfRange(bytes, i * PROPHET_6_SYSEX_LENGTH, (i + 1) * PROPHET_6_SYSEX_LENGTH);
-				validateP6Program(slice);
-			}
-		}
-
-		public static void validateP6Library(byte[] bytes) throws Exception {
-			if (bytes.length != PROPHET_6_SYSEX_LENGTH * PROPHET_6_USER_BANK_COUNT)
-				throw new Exception("Invalid Prophet 6 Library File:  Invalid Byte Length");
-			for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-				byte[] slice = Arrays.copyOfRange(bytes, i * PROPHET_6_SYSEX_LENGTH, (i + 1) * PROPHET_6_SYSEX_LENGTH);
-				validateP6Program(slice);
-			}
-		}
-
-		public static void validateP6Program(byte[] bytes) throws Exception {
-			if (bytes.length != PROPHET_6_SYSEX_LENGTH)
-				throw new Exception("Invalid Prophet 6 Program File:  Invalid Byte Length");
-
-			if (bytes[0] != (byte) 0xf0)
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - Byte 0 - System Exclusive");
-			if (bytes[1] != (byte) 0x01)
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - Byte 1 - DSI ID");
-			if (bytes[2] != (byte) 0x2d)
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - Byte 2 - Prophet-6 ID");
-			if (bytes[3] != (byte) 0x02)
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - Byte 3 - Program Data");
-
-			byte bankNo = (byte) ((byte) bytes[SYSEX_BYTE_OFFSET_PATCH_BANK] & 0x0F);
-			byte progNo = (byte) ((byte) bytes[SYSEX_BYTE_OFFSET_PATCH_PROG] & 0x7F);
-
-			if (!(bankNo >= 0 && bankNo <= 9))
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - Byte 4 - Bank Number");
-			if (!(progNo >= 0 && progNo <= 99))
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - Byte 5 - Program Number");
-			if (bytes[bytes.length - 1] != (byte) 0xF7)
-				throw new Exception("Invalid Prophet 6 Program File:  Sysex - End of Exclusive (EOX)");
-		}
-	}
-
-	public static class Prophet6SysexPatch implements Cloneable {
-		byte[] bytes;
-		byte[] packedMIDIData;
-		byte[] inputData;
-
-		public static final byte[] INIT_PATCH_BYTES = new byte[] { (byte) 0xf0, (byte) 0x01, (byte) 0x2d, (byte) 0x02,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x18, (byte) 0x18, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x00, (byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x01, (byte) 0x00, (byte) 0x20, (byte) 0x46, (byte) 0x00, (byte) 0x00, (byte) 0x07, (byte) 0x00,
-				(byte) 0x23, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x28, (byte) 0x00, (byte) 0x00, (byte) 0x0a, (byte) 0x00,
-				(byte) 0x00, (byte) 0x40, (byte) 0x00, (byte) 0x40, (byte) 0x64, (byte) 0x40, (byte) 0x64, (byte) 0x40,
-				(byte) 0x00, (byte) 0x00, (byte) 0x08, (byte) 0x03, (byte) 0x03, (byte) 0x00, (byte) 0x06, (byte) 0x0b,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x7f, (byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x78, (byte) 0x00,
-				(byte) 0x02, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x06, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x06, (byte) 0x00, (byte) 0x42, (byte) 0x61, (byte) 0x73,
-				(byte) 0x69, (byte) 0x63, (byte) 0x00, (byte) 0x20, (byte) 0x50, (byte) 0x72, (byte) 0x6f, (byte) 0x67,
-				(byte) 0x72, (byte) 0x61, (byte) 0x00, (byte) 0x6d, (byte) 0x20, (byte) 0x20, (byte) 0x20, (byte) 0x20,
-				(byte) 0x20, (byte) 0x20, (byte) 0x30, (byte) 0x20, (byte) 0x64, (byte) 0x3c, (byte) 0x40, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x3c, (byte) 0x02, (byte) 0x43, (byte) 0x7f, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x78, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x07, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x3c, (byte) 0x00, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c, (byte) 0x3c,
-				(byte) 0x3c, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x0c, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x00,
-				(byte) 0x02, (byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x02,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
-				(byte) 0x00, (byte) 0x00, (byte) 0x36, (byte) 0x00, (byte) 0x7f, (byte) 0x7f, (byte) 0x00, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x00, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
-				(byte) 0x7f, (byte) 0x7f, (byte) 0x03, (byte) 0x7f, (byte) 0x7f, (byte) 0xf7 };
-
-		public Prophet6SysexPatch(byte[] bytes) {
-			this.bytes = bytes.clone();
-			this.packedMIDIData = parsePackedMIDIData();
-			this.inputData = unpackMIDIData(this.packedMIDIData);
-		}
-
-		@Override
-		public Object clone() throws CloneNotSupportedException {
-			Prophet6SysexPatch patch = (Prophet6SysexPatch) super.clone();
-			patch.bytes = this.bytes.clone();
-			patch.packedMIDIData = this.packedMIDIData.clone();
-			patch.inputData = this.inputData.clone();
-			return patch;
-		}
-
-		public byte[] getPatchAuditionBytes() {
-			byte[] auditionData = new byte[PROPHET_6_EDIT_BUFFER_LENGTH];
-			auditionData[0] = (byte) 0xf0;
-			auditionData[1] = (byte) 0x01;
-			auditionData[2] = (byte) 0x2d;
-			auditionData[3] = (byte) 0x03;
-			System.arraycopy(this.packedMIDIData, 0, auditionData, SYSEX_EDIT_BUFFER_BYTE_OFFSET_PACKED_MIDI_DATA,
-					SYSEX_PACKED_MIDI_DATA_LENGTH);
-			auditionData[PROPHET_6_EDIT_BUFFER_LENGTH - 1] = (byte) 0xf7;
-			return auditionData;
-		}
-
-		public void setPatchName(String s) {
-			assert s.length() <= SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH;
-
-			while (s.length() < SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH) {
-				s = s + " ";
-			}
-
-			byte[] nameBytes = s.getBytes(StandardCharsets.UTF_8);
-
-			System.arraycopy(nameBytes, 0, this.inputData, SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_OFFSET,
-					SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH);
-
-			this.packedMIDIData = packMIDIData(this.inputData);
-
-			System.arraycopy(this.packedMIDIData, 0, this.bytes, SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA,
-					SYSEX_PACKED_MIDI_DATA_LENGTH);
-		}
-
-		public byte[] parsePackedMIDIData() {
-			byte[] packedMIDIData = Arrays.copyOfRange(bytes, SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA,
-					SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA + SYSEX_PACKED_MIDI_DATA_LENGTH);
-			return packedMIDIData;
-		}
-
-		public byte[] packMIDIData(byte[] data) {
-			assert data.length == SYSEX_UNPACKED_MIDI_DATA_LENGTH;
-			byte[] packedMIDIData = new byte[SYSEX_PACKED_MIDI_DATA_LENGTH];
-			byte[] unpackedMIDIData = data;
-
-			ByteBuffer bb = ByteBuffer.wrap(packedMIDIData);
-
-			int i = 0;
-			for (i = 0; i < SYSEX_UNPACKED_MIDI_DATA_LENGTH - SYSEX_UNPACKED_MIDI_LAST_PACKET_LENGTH;) {
-				byte a = unpackedMIDIData[i++];
-				byte b = unpackedMIDIData[i++];
-				byte c = unpackedMIDIData[i++];
-				byte d = unpackedMIDIData[i++];
-				byte e = unpackedMIDIData[i++];
-				byte f = unpackedMIDIData[i++];
-				byte g = unpackedMIDIData[i++];
-
-				byte a7 = (byte) ((a & 0x80) >> 7);
-				byte b7 = (byte) ((b & 0x80) >> 6);
-				byte c7 = (byte) ((c & 0x80) >> 5);
-				byte d7 = (byte) ((d & 0x80) >> 4);
-				byte e7 = (byte) ((e & 0x80) >> 3);
-				byte f7 = (byte) ((f & 0x80) >> 2);
-				byte g7 = (byte) ((g & 0x80) >> 1);
-
-				byte eigthByte = (byte) (a7 | b7 | c7 | d7 | e7 | f7 | g7);
-
-				bb.put(eigthByte);
-				bb.put((byte) (a & 0x7F));
-				bb.put((byte) (b & 0x7F));
-				bb.put((byte) (c & 0x7F));
-				bb.put((byte) (d & 0x7F));
-				bb.put((byte) (e & 0x7F));
-				bb.put((byte) (f & 0x7F));
-				bb.put((byte) (g & 0x7F));
-			}
-			/* there are 3 bytes remaining */
-			byte a = unpackedMIDIData[i++];
-			byte b = unpackedMIDIData[i++];
-
-			byte a7 = (byte) ((a & 0x80) >> 7);
-			byte b7 = (byte) ((b & 0x80) >> 6);
-
-			byte eigthByte = (byte) (a7 | b7);
-
-			bb.put(eigthByte);
-			bb.put((byte) (a & 0x7F));
-			bb.put((byte) (b & 0x7F));
-
-			return bb.array();
-		}
-
-		public byte[] unpackMIDIData(byte[] data) {
-			byte[] packedMIDIData = data;
-			byte[] unpackedMIDIData = new byte[SYSEX_UNPACKED_MIDI_DATA_LENGTH];
-
-			ByteBuffer bb = ByteBuffer.wrap(unpackedMIDIData);
-
-			int i = 0;
-			for (i = 0; i < SYSEX_PACKED_MIDI_DATA_LENGTH - SYSEX_PACKED_MIDI_LAST_PACKET_LENGTH;) {
-				byte eigthByte = packedMIDIData[i++];
-				byte a = packedMIDIData[i++];
-				byte b = packedMIDIData[i++];
-				byte c = packedMIDIData[i++];
-				byte d = packedMIDIData[i++];
-				byte e = packedMIDIData[i++];
-				byte f = packedMIDIData[i++];
-				byte g = packedMIDIData[i++];
-
-				byte newA = (byte) (((eigthByte & 0x01) << 7) | a);
-				byte newB = (byte) (((eigthByte & 0x02) << 6) | b);
-				byte newC = (byte) (((eigthByte & 0x04) << 5) | c);
-				byte newD = (byte) (((eigthByte & 0x08) << 4) | d);
-				byte newE = (byte) (((eigthByte & 0x10) << 3) | e);
-				byte newF = (byte) (((eigthByte & 0x20) << 2) | f);
-				byte newG = (byte) (((eigthByte & 0x40) << 1) | g);
-
-				bb.put(newA);
-				bb.put(newB);
-				bb.put(newC);
-				bb.put(newD);
-				bb.put(newE);
-				bb.put(newF);
-				bb.put(newG);
-			}
-			/* there are 3 bytes remaining */
-			byte eigthByte = packedMIDIData[i++];
-			byte a = packedMIDIData[i++];
-			byte b = packedMIDIData[i++];
-			byte newA = (byte) (((eigthByte & 0x01) << 7) | a);
-			byte newB = (byte) (((eigthByte & 0x02) << 6) | b);
-			bb.put(newA);
-			bb.put(newB);
-
-			return bb.array();
-		}
-
-		public String getPatchName() {
-			byte[] patchNameBytes = Arrays.copyOfRange(inputData, SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_OFFSET,
-					SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_OFFSET + SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH);
-
-			String s = new String(patchNameBytes, StandardCharsets.UTF_8);
-			return s;
-		}
-
-		public int getPatchBank() {
-			return (int) bytes[SYSEX_BYTE_OFFSET_PATCH_BANK] & 0x0F;
-		}
-
-		public int getPatchProg() {
-			return (int) bytes[SYSEX_BYTE_OFFSET_PATCH_PROG] & 0x7F;
-		}
-
-		public String toString() {
-			int bankProg = getPatchBank() * 100 + getPatchProg();
-			return String.format("%03d", bankProg) + " " + getPatchName().replaceAll("\\s+$", "");
-		}
-
-		public String getBankProgPadded() {
-			int bankProg = getPatchBank() * 100 + getPatchProg();
-			return String.format("%03d", bankProg);
-		}
-
-		public void setPatchBank(int bankNo) {
-			assert bankNo >= 0 && bankNo <= 9;
-			bytes[SYSEX_BYTE_OFFSET_PATCH_BANK] = (byte) ((byte) bankNo & 0x0F);
-		}
-
-		public void setPatchProg(int progNo) {
-			assert progNo >= 0 && progNo <= 99;
-			bytes[SYSEX_BYTE_OFFSET_PATCH_PROG] = (byte) ((byte) progNo & 0x7F);
-		}
-	}
-
-	public static class Prophet6SysexDummySelection implements Transferable {
+	public static class SysexDummySelection implements Transferable {
 
 		private static DataFlavor dmselFlavor = new DataFlavor(Object.class, "Prophet 6 Sysex Dummy data flavor");
 		private Object selection;
 
-		public Prophet6SysexDummySelection(Object selection) {
+		public SysexDummySelection(Object selection) {
 			this.selection = selection;
 		}
 
@@ -2751,14 +2364,13 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public static class Prophet6SysexPatchMultiSelection implements Transferable {
+	public static class SysexPatchMultiSelection implements Transferable {
 
-		private static DataFlavor multiPatchFlavor = new DataFlavor(List.class,
-				"Prophet 6 Sysex Multiple Patch data flavor");
+		private static DataFlavor multiPatchFlavor = new DataFlavor(List.class, "Sysex Multiple Patch data flavor");
 
-		private List<Prophet6SysexPatch> selection;
+		private List<AbstractSysexPatch> selection;
 
-		public Prophet6SysexPatchMultiSelection(List<Prophet6SysexPatch> selection) {
+		public SysexPatchMultiSelection(List<AbstractSysexPatch> selection) {
 			this.selection = selection;
 		}
 
@@ -2788,13 +2400,12 @@ public class Prophet6SoundLibrarian {
 		}
 	}
 
-	public static class Prophet6SysexPatchSelection implements Transferable, ClipboardOwner {
+	public static class SysexPatchSelection implements Transferable, ClipboardOwner {
 
-		private static DataFlavor dmselFlavor = new DataFlavor(Prophet6SysexPatch.class,
-				"Prophet 6 Sysex Patch data flavor");
-		private Prophet6SysexPatch selection;
+		private static DataFlavor dmselFlavor = new DataFlavor(AbstractSysexPatch.class, "Sysex Patch data flavor");
+		private AbstractSysexPatch selection;
 
-		public Prophet6SysexPatchSelection(Prophet6SysexPatch selection) {
+		public SysexPatchSelection(AbstractSysexPatch selection) {
 			this.selection = selection;
 		}
 
@@ -2829,23 +2440,23 @@ public class Prophet6SoundLibrarian {
 
 	}
 
-	public class Prophet6SysexTableItemModel extends AbstractTableModel {
+	public class SysexTableItemModel extends AbstractTableModel {
 
 		private static final long serialVersionUID = 1L;
-		private List<Prophet6SysexPatch> patches;
+		private List<AbstractSysexPatch> patches;
 		public String[] headers = new String[] { "#", "Name" };
 
-		public Prophet6SysexTableItemModel() {
-			this.patches = new ArrayList<Prophet6SysexPatch>();
+		public SysexTableItemModel() {
+			this.patches = new ArrayList<AbstractSysexPatch>();
 			for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 				this.patches.add(new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES));
 				updateAllPatchNumbers();
 			}
 		}
 
-		public Prophet6SysexTableItemModel(List<Prophet6SysexPatch> patches) {
+		public SysexTableItemModel(List<AbstractSysexPatch> patches) {
 
-			this.patches = new ArrayList<Prophet6SysexPatch>(patches);
+			this.patches = new ArrayList<AbstractSysexPatch>(patches);
 
 		}
 
@@ -2857,7 +2468,7 @@ public class Prophet6SoundLibrarian {
 
 		public void updateAllPatchNumbers() {
 			for (int i = 0; i < patches.size(); i++) {
-				Prophet6SysexPatch patch = patches.get(i);
+				AbstractSysexPatch patch = patches.get(i);
 				patch.setPatchBank(i / 100);
 				patch.setPatchProg(i % 100);
 			}
@@ -2873,7 +2484,7 @@ public class Prophet6SoundLibrarian {
 			fireTableDataChanged();
 		}
 
-		public void addRow(Prophet6SysexPatch patch) {
+		public void addRow(AbstractSysexPatch patch) {
 			patches.add(patch);
 			fireTableDataChanged();
 		}
@@ -2902,11 +2513,11 @@ public class Prophet6SoundLibrarian {
 		public Object getValueAt(int rowIndex, int columnIndex) {
 
 			Object value = "??";
-			Prophet6SysexPatch patch = patches.get(rowIndex);
+			AbstractSysexPatch patch = patches.get(rowIndex);
 			switch (columnIndex) {
 			case 0:
 //				value = patch.getPatchBank() + "-" + patch.getPatchProg();
-				value = patch.getBankProgPadded();
+				value = patch.getBankProgPretty();
 				break;
 			case 1:
 				value = patch.getPatchName();
@@ -2917,15 +2528,15 @@ public class Prophet6SoundLibrarian {
 
 		}
 
-		public List<Prophet6SysexPatch> getPatches() {
+		public List<AbstractSysexPatch> getPatches() {
 			return patches;
 		}
 
-		public Prophet6SysexPatch getProphet6SysexPatchAt(int row) {
+		public AbstractSysexPatch getPatchAt(int row) {
 			return patches.get(row);
 		}
 
-		public void setPatches(List<Prophet6SysexPatch> patches) {
+		public void setPatches(List<AbstractSysexPatch> patches) {
 			this.patches = patches;
 		}
 

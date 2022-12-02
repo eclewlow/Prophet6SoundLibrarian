@@ -1,4 +1,4 @@
-package com.eclewlow.sequential.prophet6;
+package com.eclewlow.sequential;
 
 public interface Observer {
 	void update(String status, String target);

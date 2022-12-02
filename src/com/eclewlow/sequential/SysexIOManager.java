@@ -1,4 +1,4 @@
-package com.eclewlow.sequential.prophet6;
+package com.eclewlow.sequential;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,8 +15,8 @@ import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiException;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiNotification;
 
-public class Prophet6Sysex {
-	private static Prophet6Sysex instance = null;
+public class SysexIOManager {
+	private static SysexIOManager instance = null;
 
 	MidiDevice inDevice = null;
 	MidiDevice outDevice = null;
@@ -39,20 +39,20 @@ public class Prophet6Sysex {
 	public static final byte[] SYSEX_MSG_DUMP_REQUEST = { (byte) 0xF0, 0x01, 0b00101101, 0b00000101, 0, 0,
 			(byte) 0b11110111 };
 
-	private Prophet6Sysex() {
+	private SysexIOManager() {
 		super();
 		try {
 			for (javax.sound.midi.MidiDevice.Info device : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
 				System.out.println("  " + device);
 			}
 
-			if (Prophet6Sysex.isCoreMidiLoaded()) {
+			if (SysexIOManager.isCoreMidiLoaded()) {
 				System.out.println("CoreMIDI4J native library is running.");
 			} else {
 				System.out.println("CoreMIDI4J native library is not available.");
 			}
 
-			Prophet6Sysex.watchForMidiChanges();
+			SysexIOManager.watchForMidiChanges();
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -60,9 +60,9 @@ public class Prophet6Sysex {
 
 	}
 
-	public static Prophet6Sysex getInstance() {
+	public static SysexIOManager getInstance() {
 		if (instance == null)
-			instance = new Prophet6Sysex();
+			instance = new SysexIOManager();
 
 		return instance;
 	}
@@ -143,7 +143,7 @@ public class Prophet6Sysex {
 
 				byte[] msg = message.getMessage();
 
-				synchronized (Prophet6Sysex.getInstance()) {
+				synchronized (SysexIOManager.getInstance()) {
 					try {
 						setReadBytes(msg);
 
@@ -153,7 +153,7 @@ public class Prophet6Sysex {
 						}
 						transmitter = null;
 
-						Prophet6Sysex.getInstance().notify();
+						SysexIOManager.getInstance().notify();
 
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -223,7 +223,7 @@ public class Prophet6Sysex {
 			public void midiSystemUpdated() {
 				System.out.println("The MIDI environment has changed.");
 				try {
-					Prophet6Sysex.getInstance().rescanDevices();
+					SysexIOManager.getInstance().rescanDevices();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
