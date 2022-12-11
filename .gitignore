@@ -23,3 +23,5 @@
 hs_err_pid*
 bin/
 .classpath
+
+.DS_STORE

@@ -21,6 +21,7 @@ public class SysexIOManager {
 	MidiDevice inDevice = null;
 	MidiDevice outDevice = null;
 	MidiDeviceTransmitter transmitter = null;
+	Class<?> sysexClass = null;
 
 	private byte[] readBytes;
 
@@ -58,6 +59,37 @@ public class SysexIOManager {
 			e.printStackTrace();
 		}
 
+	}
+
+	private SysexIOManager(Class<?> c) {
+		super();
+
+		this.sysexClass = c;
+
+		try {
+			for (javax.sound.midi.MidiDevice.Info device : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
+				System.out.println("  " + device);
+			}
+
+			if (SysexIOManager.isCoreMidiLoaded()) {
+				System.out.println("CoreMIDI4J native library is running.");
+			} else {
+				System.out.println("CoreMIDI4J native library is not available.");
+			}
+
+			SysexIOManager.watchForMidiChanges();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public static SysexIOManager getInstance(Class<?> c) {
+		if (instance == null)
+			instance = new SysexIOManager(c);
+
+		return instance;
 	}
 
 	public static SysexIOManager getInstance() {
@@ -103,8 +135,16 @@ public class SysexIOManager {
 		byte bankNumber = (byte) bankNo;
 		byte progNumber = (byte) progNo;
 
-		byte[] msg = new byte[] { (byte) 0xF0, 0x01, 0b00101101, 0b00000101, bankNumber, progNumber,
-				(byte) 0b11110111 };
+		byte synthId = (byte) 0x00;
+
+		if (this.sysexClass == Prophet6SysexPatch.class)
+			synthId = 0b00101101;
+		else if (this.sysexClass == OB6SysexPatch.class)
+			synthId = 0b00101110;
+		else
+			throw new Exception("Synth class unknown or not set");
+
+		byte[] msg = new byte[] { (byte) 0xF0, 0x01, synthId, 0b00000101, bankNumber, progNumber, (byte) 0b11110111 };
 
 		try {
 			if (outDevice == null)
@@ -198,8 +238,12 @@ public class SysexIOManager {
 		for (javax.sound.midi.MidiDevice.Info device : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
 			try {
 				MidiDevice md = MidiSystem.getMidiDevice(device);
-				if (device.getName().equals("CoreMIDI4J - Prophet 6")
-						&& device.getVendor().equals("Dave Smith Instruments")) {
+
+				if (!device.getVendor().equals("Dave Smith Instruments"))
+					continue;
+
+				if ((device.getName().equals("CoreMIDI4J - Prophet 6") && this.sysexClass == Prophet6SysexPatch.class)
+						|| (device.getName().equals("CoreMIDI4J - OB-6") && this.sysexClass == OB6SysexPatch.class)) {
 					if (md.getMaxReceivers() == -1) {
 						setInDevice(md);
 					}
@@ -211,7 +255,7 @@ public class SysexIOManager {
 				e.printStackTrace();
 			}
 			if (isConnected()) {
-				notifyObservers("CONNECTED", "Prophet 6");
+				notifyObservers("CONNECTED", SysexPatchFactory.getSynthName(this.sysexClass));
 			} else {
 				notifyObservers("DISCONNECTED", "No Device");
 			}

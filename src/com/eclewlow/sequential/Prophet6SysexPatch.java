@@ -1,6 +1,5 @@
 package com.eclewlow.sequential;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -12,20 +11,11 @@ public class Prophet6SysexPatch extends AbstractSysexPatch {
 	private static final int SYSEX_BYTE_OFFSET_PATCH_BANK = 4;
 	private static final int SYSEX_BYTE_OFFSET_PATCH_PROG = 5;
 	private static final int SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA = 6;
-	private static final int PROPHET_6_SYSEX_LENGTH = 1178;
 	private static final int PROPHET_6_EDIT_BUFFER_LENGTH = 1176;
 	private static final int SYSEX_EDIT_BUFFER_BYTE_OFFSET_PACKED_MIDI_DATA = 4;
 	private static final int SYSEX_PACKED_MIDI_DATA_LENGTH = 1171;
-	private static final int SYSEX_PACKED_MIDI_LAST_PACKET_LENGTH = 3;
-	private static final int SYSEX_UNPACKED_MIDI_DATA_LENGTH = 1024;
-	private static final int SYSEX_UNPACKED_MIDI_LAST_PACKET_LENGTH = 2;
 	private static final int SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_OFFSET = 107;
 	private static final int SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH = 20;
-	private static final int PROPHET_6_USER_BANK_COUNT = 500;
-	private static final int SYSEX_SEND_DELAY_TIME = 150;
-	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT = 5;
-	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS = 1000;
-
 	public static final byte[] INIT_PATCH_BYTES = new byte[] { (byte) 0xf0, (byte) 0x01, (byte) 0x2d, (byte) 0x02,
 			(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x18, (byte) 0x18, (byte) 0x7f, (byte) 0x7f, (byte) 0x7f,
 			(byte) 0x7f, (byte) 0x7f, (byte) 0x00, (byte) 0x7f, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,
@@ -180,6 +170,10 @@ public class Prophet6SysexPatch extends AbstractSysexPatch {
 		this.packedMIDIData = Arrays.copyOfRange(bytes, SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA,
 				SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA + SYSEX_PACKED_MIDI_DATA_LENGTH);
 		this.inputData = MidiDataFormat.unpackMIDIData(this.packedMIDIData);
+	}
+
+	public Prophet6SysexPatch() {
+		this(INIT_PATCH_BYTES);
 	}
 
 	@Override

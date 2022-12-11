@@ -36,7 +36,7 @@ import java.awt.font.LineMetrics;
 
 public class SoundLibrarian {
 
-	public static final String APP_VERSION = "1.1.12";
+	public static final String APP_VERSION = "1.2.0";
 
 	public SoundLibrarianMainFrame mainFrame;
 	public SoundLibrarianMergeFrame mergeFrame;
@@ -214,10 +214,14 @@ public class SoundLibrarian {
 								JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
 						if (n == JOptionPane.OK_OPTION) {
 							for (int i = 0; i < selectedRows.length; i++) {
-								AbstractSysexPatch initPatch = new Prophet6SysexPatch(
-										Prophet6SysexPatch.INIT_PATCH_BYTES);
+								try {
+									AbstractSysexPatch initPatch = SysexPatchFactory.getClosestPatchType(null,
+											SoundLibrarian.this.sysexPatchClass);
 
-								patches.set(selectedRows[i], initPatch);
+									patches.set(selectedRows[i], initPatch);
+								} catch (Exception ex) {
+									ex.printStackTrace();
+								}
 
 							}
 							dlm.fireTableDataChanged();
@@ -246,7 +250,7 @@ public class SoundLibrarian {
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(false);
 								menuBar.menuItemSaveProgram.setEnabled(true);
-								if (SysexIOManager.getInstance().isConnected()) {
+								if (SysexIOManager.getInstance(SoundLibrarian.this.sysexPatchClass).isConnected()) {
 									sendButton.setEnabled(true);
 									receiveButton.setEnabled(true);
 									auditionSendButton.setEnabled(true);
@@ -258,7 +262,7 @@ public class SoundLibrarian {
 								nameField.setEnabled(true);
 								menuBar.menuItemLoadProgram.setEnabled(true);
 								menuBar.menuItemSaveProgram.setEnabled(true);
-								if (SysexIOManager.getInstance().isConnected()) {
+								if (SysexIOManager.getInstance(SoundLibrarian.this.sysexPatchClass).isConnected()) {
 									sendButton.setEnabled(true);
 									receiveButton.setEnabled(true);
 									auditionSendButton.setEnabled(true);
@@ -498,7 +502,8 @@ public class SoundLibrarian {
 				sendButton.setEnabled(enabled);
 				receiveButton.setEnabled(enabled);
 				auditionSendButton.setEnabled(enabled);
-			} else if (SysexIOManager.getInstance().isConnected() && mainFrame.ddl.getSelectedRowCount() > 0) {
+			} else if (SysexIOManager.getInstance(SoundLibrarian.this.sysexPatchClass).isConnected()
+					&& mainFrame.ddl.getSelectedRowCount() > 0) {
 				sendButton.setEnabled(enabled);
 				receiveButton.setEnabled(enabled);
 				auditionSendButton.setEnabled(enabled);
@@ -515,7 +520,12 @@ public class SoundLibrarian {
 
 			JPanel sequentialPanel = new JPanel();
 
-			ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+			ImageIcon sequentialIcon = null;
+
+			if (SoundLibrarian.this.sysexPatchClass == Prophet6SysexPatch.class)
+				sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+			else if (SoundLibrarian.this.sysexPatchClass == OB6SysexPatch.class)
+				sequentialIcon = new ImageIcon(getClass().getResource("ob6-small-black.png"));
 
 			JLabel sequentialLabel = new JLabel(sequentialIcon);
 
@@ -557,7 +567,7 @@ public class SoundLibrarian {
 
 			deviceLabel.setPreferredSize(new Dimension(CONNECTION_PREFERRED_WIDTH, CONNECTION_PREFERRED_HEIGHT));
 
-			SysexIOManager.getInstance().addObserver(new Observer() {
+			SysexIOManager.getInstance(SoundLibrarian.this.sysexPatchClass).addObserver(new Observer() {
 
 				@Override
 				public void update(String status, String target) {
@@ -613,14 +623,15 @@ public class SoundLibrarian {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
-								SysexIOManager p6sysex = SysexIOManager.getInstance();
+								SysexIOManager sysexManager = SysexIOManager
+										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
 								for (int i = 0; i < selectedRows.length; i++) {
 
 									dialog.setProgressBarValue(i + 1);
 									dialog.setProgressText("Sending..." + (i + 1) + " / " + selectedRows.length);
 
-									p6sysex.send(l.get(selectedRows[i]).getBytes());
+									sysexManager.send(l.get(selectedRows[i]).getBytes());
 									Thread.sleep(SYSEX_SEND_DELAY_TIME);
 								}
 
@@ -665,9 +676,10 @@ public class SoundLibrarian {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
-								SysexIOManager p6sysex = SysexIOManager.getInstance();
+								SysexIOManager sysexManager = SysexIOManager
+										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
-								synchronized (p6sysex) {
+								synchronized (sysexManager) {
 
 									for (int i = 0; i < selectedRows.length; i++) {
 										int bankNo = l.get(selectedRows[i]).getPatchBank();
@@ -680,16 +692,16 @@ public class SoundLibrarian {
 
 										for (int j = 0; j < MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT; j++) {
 
-											p6sysex.dumpRequest(bankNo, progNo);
+											sysexManager.dumpRequest(bankNo, progNo);
 
-											p6sysex.wait(MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS);
+											sysexManager.wait(MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS);
 
-											readBytes = p6sysex.getReadBytes();
+											readBytes = sysexManager.getReadBytes();
 
 											if (readBytes != null)
 												break;
 
-											p6sysex.cleanupTransmitter();
+											sysexManager.cleanupTransmitter();
 										}
 
 										if (readBytes == null) {
@@ -697,9 +709,13 @@ public class SoundLibrarian {
 													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
 										}
 
-										AbstractSysexPatch patch = new Prophet6SysexPatch(readBytes);
-
-										l.set(selectedRows[i], patch);
+										try {
+											AbstractSysexPatch patch = SysexPatchFactory.getClosestPatchType(readBytes,
+													SoundLibrarian.this.sysexPatchClass);
+											l.set(selectedRows[i], patch);
+										} catch (Exception ex) {
+											ex.printStackTrace();
+										}
 									}
 								}
 
@@ -744,14 +760,15 @@ public class SoundLibrarian {
 						public void run() {
 
 							try {
-								SysexIOManager p6sysex = SysexIOManager.getInstance();
+								SysexIOManager sysexManager = SysexIOManager
+										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
 								for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 
 									dialog.setProgressBarValue(i + 1);
 									dialog.setProgressText("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
 
-									p6sysex.send(l.get(i).getBytes());
+									sysexManager.send(l.get(i).getBytes());
 
 									Thread.sleep(SYSEX_SEND_DELAY_TIME);
 								}
@@ -789,9 +806,10 @@ public class SoundLibrarian {
 						@Override
 						public synchronized void run() {
 							try {
-								SysexIOManager p6sysex = SysexIOManager.getInstance();
+								SysexIOManager sysexManager = SysexIOManager
+										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
-								synchronized (p6sysex) {
+								synchronized (sysexManager) {
 									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
 										int bankNo = i / 100;
 										int progNo = i % 100;
@@ -804,26 +822,29 @@ public class SoundLibrarian {
 
 										for (int j = 0; j < MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT; j++) {
 
-											p6sysex.dumpRequest(bankNo, progNo);
+											sysexManager.dumpRequest(bankNo, progNo);
 
-											p6sysex.wait(MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS);
+											sysexManager.wait(MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS);
 
-											readBytes = p6sysex.getReadBytes();
+											readBytes = sysexManager.getReadBytes();
 
 											if (readBytes != null)
 												break;
 
-											p6sysex.cleanupTransmitter();
+											sysexManager.cleanupTransmitter();
 										}
 
 										if (readBytes == null) {
 											throw new Exception(
 													"Error reading bytes.  This happens sometimes when disconnecting and reconnecting the Prophet 6.  Please try again.");
 										}
-
-										AbstractSysexPatch patch = new Prophet6SysexPatch(readBytes);
-
-										l.set(i, patch);
+										try {
+											AbstractSysexPatch patch = SysexPatchFactory.getClosestPatchType(readBytes,
+													SoundLibrarian.this.sysexPatchClass);
+											l.set(i, patch);
+										} catch (Exception ex) {
+											ex.printStackTrace();
+										}
 									}
 								}
 
@@ -945,12 +966,13 @@ public class SoundLibrarian {
 								if (selectedRows.length == 0)
 									throw new Exception("No rows selected");
 
-								SysexIOManager p6sysex = SysexIOManager.getInstance();
+								SysexIOManager sysexManager = SysexIOManager
+										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
 								dialog.setProgressBarValue(1);
 								dialog.setProgressText("Sending..." + (1) + " / " + selectedRows.length);
 
-								p6sysex.send(l.get(selectedRows[0]).getPatchAuditionBytes());
+								sysexManager.send(l.get(selectedRows[0]).getPatchAuditionBytes());
 
 								Thread.sleep(SYSEX_SEND_DELAY_TIME);
 
@@ -1448,11 +1470,16 @@ public class SoundLibrarian {
 
 					SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
 
-					for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-						AbstractSysexPatch patch = new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES);
-
-						newList.add(patch);
+					try {
+						for (int i = 0; i < SysexPatchFactory
+								.getUserBankCount(SoundLibrarian.this.sysexPatchClass); i++) {
+							newList.add(
+									SysexPatchFactory.getClosestPatchType(null, SoundLibrarian.this.sysexPatchClass));
+						}
+					} catch (Exception ex) {
+						ex.printStackTrace();
 					}
+
 					model.setPatches(newList);
 					model.fireTableDataChanged();
 					mainFrame.ddl.addRowSelectionInterval(0, 0);
@@ -1479,7 +1506,14 @@ public class SoundLibrarian {
 					else
 						fc = new JFileChooser(new File(mostRecentDirectory));
 
-					fc.addChoosableFileFilter(p6libraryFilter);
+					FileNameExtensionFilter fnef;
+					try {
+						fnef = SysexPatchFactory.getLibraryFileNameExtensionFilter(SoundLibrarian.this.sysexPatchClass);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+						return;
+					}
+					fc.addChoosableFileFilter(fnef);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Select File For Import");
 
@@ -1559,7 +1593,15 @@ public class SoundLibrarian {
 					else
 						fc = new JFileChooser(new File(mostRecentDirectory));
 
-					fc.addChoosableFileFilter(p6libraryFilter);
+					FileNameExtensionFilter fnef;
+					try {
+						fnef = SysexPatchFactory.getLibraryFileNameExtensionFilter(SoundLibrarian.this.sysexPatchClass);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+						return;
+					}
+
+					fc.addChoosableFileFilter(fnef);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Choose a destination");
 
@@ -1571,8 +1613,8 @@ public class SoundLibrarian {
 						prefs.put(PREFS_MOST_RECENT_DIRECTORY, absPath);
 
 						try {
-							if (!file.getAbsolutePath().endsWith(".p6lib")) {
-								file = new File(file + ".p6lib");
+							if (!file.getAbsolutePath().endsWith("." + fnef.getExtensions()[0])) {
+								file = new File(file + "." + fnef.getExtensions()[0]);
 							}
 							FileOutputStream fos = new FileOutputStream(file);
 							SysexTableItemModel model = (SysexTableItemModel) mainFrame.ddl.getModel();
@@ -1614,7 +1656,15 @@ public class SoundLibrarian {
 					else
 						fc = new JFileChooser(new File(mostRecentDirectory));
 
-					fc.addChoosableFileFilter(p6libraryFilter);
+					FileNameExtensionFilter fnef;
+					try {
+						fnef = SysexPatchFactory.getLibraryFileNameExtensionFilter(SoundLibrarian.this.sysexPatchClass);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+						return;
+					}
+
+					fc.addChoosableFileFilter(fnef);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Select File To Merge");
 
@@ -1693,7 +1743,15 @@ public class SoundLibrarian {
 					else
 						fc = new JFileChooser(new File(mostRecentDirectory));
 
-					fc.addChoosableFileFilter(p6programFilter);
+					FileNameExtensionFilter fnef;
+					try {
+						fnef = SysexPatchFactory.getProgramFileNameExtensionFilter(SoundLibrarian.this.sysexPatchClass);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+						return;
+					}
+
+					fc.addChoosableFileFilter(fnef);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Select File(s) For Import");
 					fc.setMultiSelectionEnabled(true);
@@ -1782,14 +1840,22 @@ public class SoundLibrarian {
 					else
 						fc = new JFileChooser(new File(mostRecentDirectory));
 
-					fc.addChoosableFileFilter(p6programFilter);
+					FileNameExtensionFilter fnef;
+					try {
+						fnef = SysexPatchFactory.getProgramFileNameExtensionFilter(SoundLibrarian.this.sysexPatchClass);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+						return;
+					}
+
+					fc.addChoosableFileFilter(fnef);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Choose a destination");
 
 					if (selectedRows.length > 1) {
 
 					} else {
-						fc.setSelectedFile(new File(l.get(selectedRow).toString() + ".p6program"));
+						fc.setSelectedFile(new File(l.get(selectedRow).toString() + "." + fnef.getExtensions()[0]));
 					}
 
 					int returnVal = fc.showSaveDialog(mainFrame);
@@ -1804,7 +1870,8 @@ public class SoundLibrarian {
 								if (file.exists() || file.mkdirs()) {
 									for (int i = 0; i < selectedRows.length; i++) {
 
-										File oneFile = new File(file, l.get(selectedRows[i]).toString() + ".p6program");
+										File oneFile = new File(file,
+												l.get(selectedRows[i]).toString() + "." + fnef.getExtensions()[0]);
 										FileOutputStream fos = new FileOutputStream(oneFile);
 										fos.write(l.get(selectedRows[i]).getBytes());
 										fos.close();
@@ -1813,8 +1880,8 @@ public class SoundLibrarian {
 									throw new Exception("Error creating directory");
 								}
 							} else {
-								if (!file.getAbsolutePath().endsWith(".p6program")) {
-									file = new File(file + ".p6program");
+								if (!file.getAbsolutePath().endsWith("." + fnef.getExtensions()[0])) {
+									file = new File(file + "." + fnef.getExtensions()[0]);
 								}
 
 								FileOutputStream fos = new FileOutputStream(file);
@@ -1858,7 +1925,15 @@ public class SoundLibrarian {
 					else
 						fc = new JFileChooser(new File(mostRecentDirectory));
 
-					fc.addChoosableFileFilter(p6sysexFilter);
+					FileNameExtensionFilter fnef;
+					try {
+						fnef = SysexPatchFactory.getSysexFileNameExtensionFilter(SoundLibrarian.this.sysexPatchClass);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+						return;
+					}
+
+					fc.addChoosableFileFilter(fnef);
 					fc.setAcceptAllFileFilterUsed(false);
 					fc.setDialogTitle("Select File To Merge");
 
@@ -2050,9 +2125,22 @@ public class SoundLibrarian {
 		private static final long serialVersionUID = 1L;
 
 		public SoundLibrarianAboutDialog() {
-			super(mainFrame, "About Prophet 6 Sound Librarian", true);
 
-			ImageIcon sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+			super(mainFrame, "About Sound Librarian", true);
+
+			try {
+				String synthName = SysexPatchFactory.getSynthName(SoundLibrarian.this.sysexPatchClass);
+				setTitle("About " + synthName + " Sound Librarian");
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+
+			ImageIcon sequentialIcon = null;
+
+			if (SoundLibrarian.this.sysexPatchClass == Prophet6SysexPatch.class)
+				sequentialIcon = new ImageIcon(getClass().getResource("prophet6-small-black.png"));
+			else if (SoundLibrarian.this.sysexPatchClass == OB6SysexPatch.class)
+				sequentialIcon = new ImageIcon(getClass().getResource("ob6-small-black.png"));
 
 			JLabel sequentialLabel = new JLabel(sequentialIcon);
 
@@ -2060,7 +2148,12 @@ public class SoundLibrarian {
 
 			JPanel southPanel = new JPanel(new BorderLayout());
 
-			southPanel.add(BorderLayout.EAST, new JLabel("Prophet 6 Sound Librarian Version: " + APP_VERSION));
+			try {
+				String synthName = SysexPatchFactory.getSynthName(SoundLibrarian.this.sysexPatchClass);
+				southPanel.add(BorderLayout.EAST, new JLabel(synthName + " Sound Librarian Version: " + APP_VERSION));
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 			southPanel.add(BorderLayout.WEST, new JLabel("Eclipse Public License - v 2.0"));
 
 			add(BorderLayout.SOUTH, southPanel);
@@ -2111,7 +2204,12 @@ public class SoundLibrarian {
 
 					int y = 0;
 
-					String presets = "SEQUENTIAL PROPHET-6 USER BANKS";
+					String presets = "USER BANKS";
+
+					if (SoundLibrarian.this.sysexPatchClass == Prophet6SysexPatch.class)
+						presets = "SEQUENTIAL PROPHET-6 USER BANKS";
+					else if (SoundLibrarian.this.sysexPatchClass == OB6SysexPatch.class)
+						presets = "SEQUENTIAL OB-6 USER BANKS";
 
 					g2d.setColor(new Color(0x231f20));
 
@@ -2207,15 +2305,18 @@ public class SoundLibrarian {
 	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT = 5;
 	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS = 1000;
 
-	static FileNameExtensionFilter p6libraryFilter = new FileNameExtensionFilter("Prophet 6 Library Files (*.p6lib)",
-			"p6lib");
-	static FileNameExtensionFilter p6programFilter = new FileNameExtensionFilter(
-			"Prophet 6 Program Files (*.p6program)", "p6program");
-	static FileNameExtensionFilter p6sysexFilter = new FileNameExtensionFilter("Prophet 6 SysEx Files (*.syx)", "syx");
-
 	private void createAndShowGUI() {
 
-		SoundLibrarianMainFrame mainFrame = new SoundLibrarianMainFrame("Prophet 6 Sound Librarian");
+		String frameTitle = "Sound Librarian";
+
+		try {
+			String synthName = SysexPatchFactory.getSynthName(SoundLibrarian.this.sysexPatchClass);
+			frameTitle = synthName + " " + frameTitle;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		SoundLibrarianMainFrame mainFrame = new SoundLibrarianMainFrame(frameTitle);
 		SoundLibrarianMergeFrame mergeFrame = new SoundLibrarianMergeFrame("Merge");
 
 		JPanel mainPanel = new JPanel();
@@ -2282,7 +2383,13 @@ public class SoundLibrarian {
 			public void run() {
 				System.setProperty("apple.laf.useScreenMenuBar", "true");
 				// set the name of the application menu item
-				System.setProperty("com.apple.mrj.application.apple.menu.about.name", "Prophet 6 Sound Librarian");
+				try {
+					String synthName = SysexPatchFactory.getSynthName(SoundLibrarian.this.sysexPatchClass);
+					System.setProperty("com.apple.mrj.application.apple.menu.about.name",
+							synthName + " Sound Librarian");
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
 
 				try {
 					// set the look and feel
@@ -2299,7 +2406,7 @@ public class SoundLibrarian {
 				UIManager.put("swing.boldMetal", Boolean.FALSE);
 				createAndShowGUI();
 				try {
-					SysexIOManager.getInstance().rescanDevices();
+					SysexIOManager.getInstance(sysexPatchClass).rescanDevices();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -2447,10 +2554,14 @@ public class SoundLibrarian {
 		public String[] headers = new String[] { "#", "Name" };
 
 		public SysexTableItemModel() {
-			this.patches = new ArrayList<AbstractSysexPatch>();
-			for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
-				this.patches.add(new Prophet6SysexPatch(Prophet6SysexPatch.INIT_PATCH_BYTES));
+			try {
+				this.patches = new ArrayList<AbstractSysexPatch>();
+				for (int i = 0; i < SysexPatchFactory.getUserBankCount(SoundLibrarian.this.sysexPatchClass); i++) {
+					this.patches.add(SysexPatchFactory.getClosestPatchType(null, SoundLibrarian.this.sysexPatchClass));
+				}
 				updateAllPatchNumbers();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 

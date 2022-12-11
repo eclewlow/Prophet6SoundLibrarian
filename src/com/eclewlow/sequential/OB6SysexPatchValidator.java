@@ -2,7 +2,7 @@ package com.eclewlow.sequential;
 
 import java.util.Arrays;
 
-public class Prophet6SysexPatchValidator extends AbstractSysexPatchValidator{
+public class OB6SysexPatchValidator extends AbstractSysexPatchValidator{
 
 	private static final int PROPHET_6_SYSEX_LENGTH = 1178;
 	private static final int SYSEX_BYTE_OFFSET_PATCH_BANK = 4;
@@ -29,7 +29,7 @@ public class Prophet6SysexPatchValidator extends AbstractSysexPatchValidator{
 			return false;
 		if (bytes[1] != (byte) 0x01)
 			return false;
-		if (bytes[2] != (byte) 0x2d)
+		if (bytes[2] != (byte) 0x2e)
 			return false;
 		if (bytes[3] != (byte) 0x02)
 			return false;
