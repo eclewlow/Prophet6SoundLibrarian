@@ -82,10 +82,20 @@ public class SoundLibrarian {
 			}
 
 			public boolean canImport(TransferHandler.TransferSupport support) {
-				if (!support.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+				UIManager.put("Table.dropLineColor", Color.CYAN);
+				UIManager.put("Table.dropLineShortColor", Color.CYAN);
+
+				if (!support.isDataFlavorSupported(DataFlavor.stringFlavor)
+						&& !support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
 					return false;
 				}
+
 				JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
+
+				if (support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+					UIManager.put("Table.dropLineColor", new Color(0xffffff, true));
+					UIManager.put("Table.dropLineShortColor", new Color(0xffffff, true));
+				}
 
 				if (dl.getRow() == -1) {
 					return false;
@@ -94,7 +104,63 @@ public class SoundLibrarian {
 				}
 			}
 
+			@SuppressWarnings("unchecked")
 			public boolean importData(TransferHandler.TransferSupport support) {
+				if (support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+
+					DragDropList dpl = (DragDropList) support.getComponent();
+					SysexTableItemModel dlm = (SysexTableItemModel) dpl.getModel();
+
+					JTable.DropLocation dl = (JTable.DropLocation) support.getDropLocation();
+					int dropTargetIndex = dl.getRow();
+
+					int i = dropTargetIndex;
+
+					try {
+
+						List<File> files = (List<File>) support.getTransferable()
+								.getTransferData(DataFlavor.javaFileListFlavor);
+
+						List<AbstractSysexPatch> l = dlm.getPatches();
+
+						for (File f : files) {
+
+							if (i >= dlm.getRowCount() || i < 0)
+								break;
+
+							FileInputStream fis = new FileInputStream(f);
+
+							byte[] buf = fis.readAllBytes();
+
+							fis.close();
+
+							SysexPatchValidator validator = new SysexPatchValidator();
+
+							Class<?> c = validator.getSinglePatchClass(buf);
+
+							if (c != SoundLibrarian.this.sysexPatchClass) {
+//								throw new Exception("Invalid file data");
+								continue;
+							}
+
+							AbstractSysexPatch patch = SysexPatchFactory.getClosestPatchType(buf,
+									SoundLibrarian.this.sysexPatchClass);
+
+							l.set(i++, patch);
+
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					dlm.fireTableDataChanged();
+
+					if (i > dropTargetIndex)
+						ddl.addRowSelectionInterval(dropTargetIndex, i - 1);
+
+					return true;
+				}
+
 				if (!canImport(support)) {
 					return false;
 				}
