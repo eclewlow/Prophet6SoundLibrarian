@@ -2059,6 +2059,8 @@ public class SoundLibrarian {
 			fileMenu.add(menuItemMergeSysex);
 
 			menuItemPrint = new JMenuItem("Print...");
+			if (SoundLibrarian.this.sysexPatchClass == Prophet5SysexPatch.class)
+				menuItemPrint.setEnabled(false);
 			menuItemPrint.addActionListener(new ActionListener() {
 
 				@Override
