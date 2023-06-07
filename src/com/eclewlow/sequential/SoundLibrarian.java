@@ -36,7 +36,7 @@ import java.awt.font.LineMetrics;
 
 public class SoundLibrarian {
 
-	public static final String APP_VERSION = "1.2.0";
+	public static final String APP_VERSION = "1.3.1";
 
 	public SoundLibrarianMainFrame mainFrame;
 	public SoundLibrarianMergeFrame mergeFrame;
