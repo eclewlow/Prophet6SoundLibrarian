@@ -37,9 +37,6 @@ public class SysexIOManager {
 		return this.readBytes;
 	}
 
-	public static final byte[] SYSEX_MSG_DUMP_REQUEST = { (byte) 0xF0, 0x01, 0b00101101, 0b00000101, 0, 0,
-			(byte) 0b11110111 };
-
 	private SysexIOManager() {
 		super();
 		try {
@@ -138,9 +135,11 @@ public class SysexIOManager {
 		byte synthId = (byte) 0x00;
 
 		if (this.sysexClass == Prophet6SysexPatch.class)
-			synthId = 0b00101101;
+			synthId = Prophet6SysexPatch.SYNTHESIZER_ID;
 		else if (this.sysexClass == OB6SysexPatch.class)
-			synthId = 0b00101110;
+			synthId = OB6SysexPatch.SYNTHESIZER_ID;
+		else if (this.sysexClass == Prophet5SysexPatch.class)
+			synthId = Prophet5SysexPatch.SYNTHESIZER_ID;
 		else
 			throw new Exception("Synth class unknown or not set");
 
@@ -243,7 +242,9 @@ public class SysexIOManager {
 					continue;
 
 				if ((device.getName().equals("CoreMIDI4J - Prophet 6") && this.sysexClass == Prophet6SysexPatch.class)
-						|| (device.getName().equals("CoreMIDI4J - OB-6") && this.sysexClass == OB6SysexPatch.class)) {
+						|| (device.getName().equals("CoreMIDI4J - OB-6") && this.sysexClass == OB6SysexPatch.class)
+						|| (device.getName().equals("CoreMIDI4J - Prophet 5") && this.sysexClass == Prophet5SysexPatch.class)
+						) {
 					if (md.getMaxReceivers() == -1) {
 						setInDevice(md);
 					}

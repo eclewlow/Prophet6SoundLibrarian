@@ -819,7 +819,7 @@ public class SoundLibrarian {
 					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
 					List<AbstractSysexPatch> l = model.getPatches();
 
-					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(PROPHET_6_USER_BANK_COUNT);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(SoundLibrarian.this.patchCount);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
@@ -829,10 +829,10 @@ public class SoundLibrarian {
 								SysexIOManager sysexManager = SysexIOManager
 										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
-								for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+								for (int i = 0; i < SoundLibrarian.this.patchCount; i++) {
 
 									dialog.setProgressBarValue(i + 1);
-									dialog.setProgressText("Sending..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
+									dialog.setProgressText("Sending..." + (i + 1) + " / " + SoundLibrarian.this.patchCount);
 
 									sysexManager.send(l.get(i).getBytes());
 
@@ -866,7 +866,7 @@ public class SoundLibrarian {
 					SysexTableItemModel model = (SysexTableItemModel) ddl.getModel();
 					List<AbstractSysexPatch> l = model.getPatches();
 
-					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(PROPHET_6_USER_BANK_COUNT);
+					SoundLibrarianProgressDialog dialog = new SoundLibrarianProgressDialog(SoundLibrarian.this.patchCount);
 					dialog.setRunnable(new Runnable() {
 
 						@Override
@@ -876,13 +876,13 @@ public class SoundLibrarian {
 										.getInstance(SoundLibrarian.this.sysexPatchClass);
 
 								synchronized (sysexManager) {
-									for (int i = 0; i < PROPHET_6_USER_BANK_COUNT; i++) {
+									for (int i = 0; i < SoundLibrarian.this.patchCount; i++) {
 										int bankNo = i / 100;
 										int progNo = i % 100;
 
 										dialog.setProgressBarValue(i + 1);
 										dialog.setProgressText(
-												"Receiving..." + (i + 1) + " / " + PROPHET_6_USER_BANK_COUNT);
+												"Receiving..." + (i + 1) + " / " + SoundLibrarian.this.patchCount);
 
 										byte[] readBytes = null;
 
@@ -1594,7 +1594,7 @@ public class SoundLibrarian {
 
 							FileInputStream fis = new FileInputStream(file);
 
-							byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH * PROPHET_6_USER_BANK_COUNT];
+							byte[] buf = new byte[SoundLibrarian.this.patchLengthBytes * SoundLibrarian.this.patchCount];
 							fis.read(buf, 0, buf.length);
 
 							fis.close();
@@ -1745,7 +1745,7 @@ public class SoundLibrarian {
 
 							FileInputStream fis = new FileInputStream(file);
 
-							byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH * PROPHET_6_USER_BANK_COUNT];
+							byte[] buf = new byte[SoundLibrarian.this.patchLengthBytes * SoundLibrarian.this.patchCount];
 							fis.read(buf, 0, buf.length);
 
 							fis.close();
@@ -1843,8 +1843,8 @@ public class SoundLibrarian {
 
 								FileInputStream fis = new FileInputStream(f);
 
-								byte[] buf = new byte[PROPHET_6_SYSEX_LENGTH];
-								fis.read(buf, 0, PROPHET_6_SYSEX_LENGTH);
+								byte[] buf = new byte[SoundLibrarian.this.patchLengthBytes];
+								fis.read(buf, 0, SoundLibrarian.this.patchLengthBytes);
 								fis.close();
 
 								SysexPatchValidator validator = new SysexPatchValidator();
@@ -2276,6 +2276,8 @@ public class SoundLibrarian {
 						presets = "SEQUENTIAL PROPHET-6 USER BANKS";
 					else if (SoundLibrarian.this.sysexPatchClass == OB6SysexPatch.class)
 						presets = "SEQUENTIAL OB-6 USER BANKS";
+					else if (SoundLibrarian.this.sysexPatchClass == Prophet5SysexPatch.class)
+						presets = "SEQUENTIAL PROPHET-5 USER BANKS";
 
 					g2d.setColor(new Color(0x231f20));
 
@@ -2360,13 +2362,8 @@ public class SoundLibrarian {
 		}
 	}
 
-	public static final byte[] SYSEX_MSG_DUMP_REQUEST = { (byte) 0xF0, 0x01, 0b00101101, 0b00000101, 0, 0,
-			(byte) 0b11110111 };
-
 	private static final String PREFS_MOST_RECENT_DIRECTORY = "directory";
-	private static final int PROPHET_6_SYSEX_LENGTH = 1178;
 	private static final int SYSEX_UNPACKED_MIDI_DATA_PATCH_NAME_LENGTH = 20;
-	private static final int PROPHET_6_USER_BANK_COUNT = 500;
 	private static final int SYSEX_SEND_DELAY_TIME = 150;
 	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_RETRY_COUNT = 5;
 	private static final int MIDI_SYSEX_SET_TRANSMITTER_RECEIVER_WAIT_MILLISECONDS = 1000;
@@ -2439,11 +2436,15 @@ public class SoundLibrarian {
 	}
 
 	public Class<?> sysexPatchClass;
+	public int patchCount;
+	public int patchLengthBytes;
 
-	public SoundLibrarian(Class<?> sysexPatchClass) {
+	public SoundLibrarian(Class<?> sysexPatchClass, int patchCount, int patchLengthBytes) {
 		super();
 
 		this.sysexPatchClass = sysexPatchClass;
+		this.patchCount = patchCount;
+		this.patchLengthBytes = patchLengthBytes;
 
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
@@ -2644,10 +2645,23 @@ public class SoundLibrarian {
 		}
 
 		public void updateAllPatchNumbers() {
+			if (SoundLibrarian.this.sysexPatchClass == Prophet5SysexPatch.class) {
+				for (int i = 0; i < patches.size(); i++) {
+					AbstractSysexPatch patch = patches.get(i);
+					patch.setPatchBank(i / 40);
+					patch.setPatchProg(i % 40);
+					
+					// maybe use later
+//					int group = i % 8 + 1;
+//					int bank = (i % 40) / 8 + 1;
+//					int program = (i % 200) / 40 + 1;
+				}				
+			} else {
 			for (int i = 0; i < patches.size(); i++) {
 				AbstractSysexPatch patch = patches.get(i);
 				patch.setPatchBank(i / 100);
 				patch.setPatchProg(i % 100);
+			}
 			}
 		}
 

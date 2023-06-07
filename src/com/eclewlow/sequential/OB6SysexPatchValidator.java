@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 public class OB6SysexPatchValidator extends AbstractSysexPatchValidator{
 
-	private static final int PROPHET_6_SYSEX_LENGTH = 1178;
+	static final int SYSEX_LENGTH = 1178;
 	private static final int SYSEX_BYTE_OFFSET_PATCH_BANK = 4;
 	private static final int SYSEX_BYTE_OFFSET_PATCH_PROG = 5;
 
@@ -12,24 +12,24 @@ public class OB6SysexPatchValidator extends AbstractSysexPatchValidator{
 	public boolean validateSysex(byte[] bytes) {
 		boolean result = true;
 
-		if (bytes.length % PROPHET_6_SYSEX_LENGTH != 0)
+		if (bytes.length % SYSEX_LENGTH != 0)
 			return false;
-		for (int i = 0; i < bytes.length / PROPHET_6_SYSEX_LENGTH; i++) {
-			byte[] slice = Arrays.copyOfRange(bytes, i * PROPHET_6_SYSEX_LENGTH, (i + 1) * PROPHET_6_SYSEX_LENGTH);
+		for (int i = 0; i < bytes.length / SYSEX_LENGTH; i++) {
+			byte[] slice = Arrays.copyOfRange(bytes, i * SYSEX_LENGTH, (i + 1) * SYSEX_LENGTH);
 			result = result && validateProgram(slice);
 		}
 		return result;
 	}
 
 	public boolean validateProgram(byte[] bytes) {
-		if (bytes.length != PROPHET_6_SYSEX_LENGTH)
+		if (bytes.length != SYSEX_LENGTH)
 			return false;
 
 		if (bytes[0] != (byte) 0xf0)
 			return false;
 		if (bytes[1] != (byte) 0x01)
 			return false;
-		if (bytes[2] != (byte) 0x2e)
+		if (bytes[2] != (byte) OB6SysexPatch.SYNTHESIZER_ID)
 			return false;
 		if (bytes[3] != (byte) 0x02)
 			return false;

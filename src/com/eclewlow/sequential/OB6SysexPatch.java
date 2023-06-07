@@ -8,6 +8,7 @@ public class OB6SysexPatch extends AbstractSysexPatch {
 	public byte[] packedMIDIData;
 	public byte[] inputData;
 
+	static final int SYNTHESIZER_ID = 0x2e;
 	private static final int SYSEX_BYTE_OFFSET_PATCH_BANK = 4;
 	private static final int SYSEX_BYTE_OFFSET_PATCH_PROG = 5;
 	private static final int SYSEX_BYTE_OFFSET_PACKED_MIDI_DATA = 6;
@@ -179,7 +180,7 @@ public class OB6SysexPatch extends AbstractSysexPatch {
 		byte[] auditionData = new byte[PROPHET_6_EDIT_BUFFER_LENGTH];
 		auditionData[0] = (byte) 0xf0;
 		auditionData[1] = (byte) 0x01;
-		auditionData[2] = (byte) 0x2e;
+		auditionData[2] = (byte) SYNTHESIZER_ID;
 		auditionData[3] = (byte) 0x03;
 		System.arraycopy(this.packedMIDIData, 0, auditionData, SYSEX_EDIT_BUFFER_BYTE_OFFSET_PACKED_MIDI_DATA,
 				SYSEX_PACKED_MIDI_DATA_LENGTH);

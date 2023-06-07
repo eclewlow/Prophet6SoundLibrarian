@@ -19,6 +19,12 @@ public class SysexPatchValidator extends AbstractSysexPatchValidator {
 			return OB6SysexPatch.class;
 		}
 
+		Prophet5SysexPatchValidator p5validator = new Prophet5SysexPatchValidator();
+
+		if (p5validator.validateSysex(bytes)) {
+			return Prophet5SysexPatch.class;
+		}
+
 		throw new Exception("Class not found");
 	}
 
@@ -33,6 +39,12 @@ public class SysexPatchValidator extends AbstractSysexPatchValidator {
 
 		if (ob6validator.validateProgram(bytes)) {
 			return OB6SysexPatch.class;
+		}
+
+		Prophet5SysexPatchValidator p5validator = new Prophet5SysexPatchValidator();
+
+		if (p5validator.validateProgram(bytes)) {
+			return Prophet5SysexPatch.class;
 		}
 
 		throw new Exception("Class not found");
